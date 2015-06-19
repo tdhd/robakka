@@ -12,24 +12,44 @@ import akka.pattern.{ ask, pipe }
 import akka.util.Timeout
 import scala.concurrent.Future
 
+case class Size(nRows: Int, nCols: Int)
+
 object World {
-  def props(): Props = Props(new World())
+  def props(worldSize: Size): Props = Props(new World(worldSize))
 }
 
-class World extends Actor with ActorLogging {
+class World(worldSize: Size) extends Actor with ActorLogging {
   import context.dispatcher
-  // needed for `?` below
-//  implicit val timeout = Timeout(1 seconds)
+
+  context.system.eventStream.subscribe(self, classOf[AgentState])
+  context.system.eventStream.subscribe(self, classOf[AgentDeath])
+
+  // announce the worlds state to everyone at a fixed interval
+  val scheduler = context.system.scheduler.schedule(0 seconds, 500 milliseconds)(announceState)
+  // TODO: the state of the world should contain more than just the agent state
+  // also plants for example
+  var state = Map.empty[Long, AgentState]
+  def announceState() = context.system.eventStream.publish(WorldState(state))
+
+  override def postStop() = {
+    context.system.eventStream.unsubscribe(self)
+    scheduler.cancel
+  }
 
   // spawns initial Agents
   override def preStart() = {
-    for (i <- 1 to 10) {
+    for (i <- 1 to 25) {
       context.watch(context.actorOf(Agent.props()))
     }
   }
 
   def receive = {
-    case msg =>
-      //println(msg)
+    case AgentDeath(id) =>
+      state -= id
+    case AgentState(id, team, location, ref) =>
+      if (state.contains(id)) {
+        state -= id
+      }
+      state += (id -> AgentState(id, team, location, ref))
   }
 }

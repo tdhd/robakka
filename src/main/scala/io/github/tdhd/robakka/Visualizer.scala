@@ -8,26 +8,25 @@ import akka.actor.ActorLogging
 import akka.actor.Props
 import akka.actor.Terminated
 import akka.actor.Cancellable
+import akka.util.Timeout
+import akka.pattern.{ ask, pipe }
 
 // http://stackoverflow.com/questions/19065053/animate-plot-on-jfreechart-line-graph
 
 object Visualizer {
-  def props(): Props = Props(new Visualizer())
+  def props(world: ActorRef, worldSize: Size): Props = Props(new Visualizer(world, worldSize))
 }
 
-class Visualizer extends Actor with ActorLogging {
+class Visualizer(world: ActorRef, worldSize: Size) extends Actor with ActorLogging {
   import context.dispatcher
+  //  implicit val timeout = Timeout(200 milliseconds)
 
-  // subscribe visualizer to events of agents
-  // TODO: group these?
-  context.system.eventStream.subscribe(self, classOf[AgentState])
-  context.system.eventStream.subscribe(self, classOf[AgentDeath])
+  // subscribe to events of the world
+  context.system.eventStream.subscribe(self, classOf[WorldState])
 
   override def postStop() = {
     context.system.eventStream.unsubscribe(self)
   }
-
-  var visualState = Map.empty[Long, AgentState]
 
   //  def plot(agents: List[AgentStatus]) = {
   //    val result = new org.jfree.data.xy.XYSeriesCollection()
@@ -55,17 +54,15 @@ class Visualizer extends Actor with ActorLogging {
   //    frame.setVisible(true)
   //  }
 
-  def plotVisualState() = {
-    val nRows = 10
-    val nCols = 20
-    println("-" * nCols)
+  def plotVisualState(visualState: Map[Long, AgentState]) = {
+    println("-" * worldSize.nCols)
     for {
-      i <- 1 to nRows
-      j <- 1 to nCols
+      i <- 1 to worldSize.nRows
+      j <- 1 to worldSize.nCols
     } {
 
       val agents = visualState.filter {
-        case (id, AgentState(_, team, GridLocation(x, y))) => x == j && y == i
+        case (id, AgentState(_, team, GridLocation(row, col), ref)) => row == i && col == j
       }
       if (agents.isEmpty) {
         print(" ")
@@ -74,7 +71,7 @@ class Visualizer extends Actor with ActorLogging {
           print(agents.size)
         } else {
           agents.foreach {
-            case (id, AgentState(_, team, _)) =>
+            case (id, AgentState(_, team, _, _)) =>
               if (team) {
                 print("x")
               } else {
@@ -83,24 +80,15 @@ class Visualizer extends Actor with ActorLogging {
           }
         }
       }
-      if (j == nCols) {
+      if (j == worldSize.nCols) {
         println("")
       }
     }
-    println("-" * nCols)
+    println("-" * worldSize.nCols)
   }
 
   def receive = {
-    case AgentDeath(id) =>
-      // remove agent
-      visualState -= id
-
-    case AgentState(id, team, location) =>
-      println(s"VISUALIZER received Agentstatus: $id, $location")
-      //      if (visualState.contains(id)) {
-      visualState -= id
-      //      }
-      visualState += (id -> AgentState(id, team, location))
-      plotVisualState()
+    case WorldState(state) =>
+      plotVisualState(state)
   }
 }

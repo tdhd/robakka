@@ -8,7 +8,6 @@ import akka.actor.ActorLogging
 import akka.actor.Props
 import akka.actor.Terminated
 import akka.actor.Cancellable
-import akka.pattern.{ ask, pipe }
 import akka.util.Timeout
 
 object Game {
@@ -17,10 +16,10 @@ object Game {
 
 class Game extends Actor with ActorLogging {
   import context.dispatcher
-//  implicit val timeout = Timeout(1 seconds)
 
-  val world = context.watch(context.actorOf(World.props(), "world"))
-  val visualizer = context.watch(context.actorOf(Visualizer.props(), "visualizer"))
+  val worldSize = Size(30, 60)
+  val world = context.watch(context.actorOf(World.props(worldSize), "world"))
+  val visualizer = context.watch(context.actorOf(Visualizer.props(world, worldSize ), "visualizer"))
 
 //  override def preStart() = {}
 
