@@ -8,6 +8,9 @@ import akka.actor.ActorLogging
 import akka.actor.Props
 import akka.actor.Terminated
 import akka.actor.Cancellable
+import akka.pattern.{ ask, pipe }
+import akka.util.Timeout
+import scala.concurrent.Future
 
 object World {
   def props(): Props = Props(new World())
@@ -15,34 +18,18 @@ object World {
 
 class World extends Actor with ActorLogging {
   import context.dispatcher
+  // needed for `?` below
+//  implicit val timeout = Timeout(1 seconds)
 
-  var agents = List.empty[Agent]
-
-  override def preStart(): Unit = {
-//    context.actorOf(ListeningActor.props(), "listener")
-//    // spawn 10 to 20 actors
-//    val nActors = 10 + scala.util.Random.nextInt(10)
-//    for(i <- 1 to nActors) {
-//      val timeToLive = scala.util.Random.nextFloat.seconds
-//      context.watch(context.actorOf(DyingActor.props(timeToLive)))
-//    }
+  // spawns initial Agents
+  override def preStart() = {
+    for (i <- 1 to 10) {
+      context.watch(context.actorOf(Agent.props()))
+    }
   }
 
   def receive = {
-    case SpawnAgent(agent) =>
-      agents :+= agent
-    case DespawnAgent(id) =>
-      agents = agents.filterNot(_.id == id)
-    case ReportAgents =>
-      sender ! AgentReport(agents)
-
-//    case Terminated(ref) =>
-//      log.info("{} terminated, {} children left", ref, context.children.size)
-//      if (context.children.size.equals(1)){
-//        // stop the listening actor
-//        context.children.foreach(context.stop)
-//        log.info("Dying!")
-//        context.stop(self)
-//      }
+    case msg =>
+      //println(msg)
   }
 }

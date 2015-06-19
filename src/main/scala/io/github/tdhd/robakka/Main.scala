@@ -18,7 +18,7 @@ object Robakka {
     val system = ActorSystem("system")
     val game = system.actorOf(Props[Game], "Game")
 
-    Thread.sleep(5000)
+    Thread.sleep(15000)
 //    system.awaitTermination(5 seconds)
     system.shutdown()
   }
