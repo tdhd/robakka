@@ -15,7 +15,7 @@ import scala.concurrent.Future
 case class Size(nRows: Int, nCols: Int)
 
 object World {
-  def props(worldSize: Size): Props = Props(new World(worldSize))
+  def props(worldSize: Size) = Props(new World(worldSize))
 }
 
 class World(worldSize: Size) extends Actor with ActorLogging {
@@ -25,7 +25,7 @@ class World(worldSize: Size) extends Actor with ActorLogging {
   context.system.eventStream.subscribe(self, classOf[AgentDeath])
 
   // announce the worlds state to everyone at a fixed interval
-  val scheduler = context.system.scheduler.schedule(0 seconds, 500 milliseconds)(announceState)
+  val scheduler = context.system.scheduler.schedule(0 seconds, 100 milliseconds)(announceState)
   // TODO: the state of the world should contain more than just the agent state
   // also plants for example
   var state = Map.empty[Long, AgentState]
@@ -39,11 +39,24 @@ class World(worldSize: Size) extends Actor with ActorLogging {
   // spawns initial Agents
   override def preStart() = {
     for (i <- 1 to 25) {
-      context.watch(context.actorOf(Agent.props()))
+      val initialState = AgentState(
+        // TODO: ensure this is unique!
+        id = scala.util.Random.nextLong,
+        location = GridLocation(scala.util.Random.nextInt(30), scala.util.Random.nextInt(60)),
+        team = scala.util.Random.nextBoolean,
+        health = 1.0, ref = self)
+//      TODO: load behaviour from command line
+      val behaviour = io.github.tdhd.robakka.behaviours.SameRowBehaviour
+//      val behaviour = io.github.tdhd.robakka.behaviours.RandomBehaviour
+
+//      context.watch(context.actorOf(Agent.props(initialState, behaviour)))
+      // dont watch
+      context.actorOf(Agent.props(initialState, behaviour))
     }
   }
 
   def receive = {
+    case Terminated(ref) =>
     case AgentDeath(id) =>
       state -= id
     case AgentState(id, location, team, health, ref) =>

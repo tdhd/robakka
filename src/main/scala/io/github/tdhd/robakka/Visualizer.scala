@@ -55,6 +55,10 @@ class Visualizer(world: ActorRef, worldSize: Size) extends Actor with ActorLoggi
   //  }
 
   def plotVisualState(visualState: Map[Long, AgentState]) = {
+    val ny = visualState.filter { case (_, AgentState(_, _, team, _, _)) => team == false }.size
+    val nx = visualState.filter { case (_, AgentState(_, _, team, _, _)) => team == true }.size
+
+    println(s"$nx x vs. $ny y")
     println("-" * worldSize.nCols)
     for {
       i <- 1 to worldSize.nRows

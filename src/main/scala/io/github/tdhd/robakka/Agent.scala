@@ -11,84 +11,107 @@ import akka.actor.Cancellable
 import akka.util.Timeout
 import akka.pattern.{ ask, pipe }
 
+import io.github.tdhd.robakka.behaviours._
+
 object Agent {
-  def props(): Props = Props(new Agent())
+  def props(initialState: AgentState, behaviour: BaseBehaviour) = {
+    Props(new Agent(initialState, behaviour))
+  }
 }
 
-class Agent extends Actor with ActorLogging {
+class Agent(initialState: AgentState, behaviour: BaseBehaviour) extends Actor with ActorLogging {
   import context.dispatcher
-  implicit val timeout = Timeout(1 seconds)
+  // for ? pattern
+  //  implicit val timeout = Timeout(1 seconds)
 
   // subscribe to changes of the world
   context.system.eventStream.subscribe(self, classOf[WorldState])
 
-  // TODO: ensure this is unique!
-//  val id = scala.util.Random.nextLong
-//  var location = 
-  // TODO: make this Int
-//  val team = scala.util.Random.nextBoolean
-//  var health = 1.0
   // TODO: aggressive, defensive
   // val stance = false
-  var selfState = AgentState(
-      scala.util.Random.nextLong,
-      GridLocation(scala.util.Random.nextInt(30), scala.util.Random.nextInt(60)),
-      scala.util.Random.nextBoolean,
-      1.0, self)
+  // update reference: if not copied, the ref of the world is kept
+  var selfState = initialState.copy(ref = self)
 
-  val world = context.parent
+  // val world = context.parent
   var worldState = Map.empty[Long, AgentState]
 
-  // scheduler for the action of an agent
-  val scheduler = context.system.scheduler.schedule(0 seconds, 250 milliseconds)(action)
+  // schedule messages to self
+  val scheduler = context.system.scheduler.schedule(0 seconds, 1000 milliseconds, self, AgentSelfAction)
 
-  def die() = context.system.eventStream.publish(AgentDeath(selfState.id))
+  override def postStop() = context.system.eventStream.unsubscribe(self)
 
-  override def postStop() = {
-    context.system.eventStream.unsubscribe(self)
+  def die() = {
+    scheduler.cancel
+    context.system.eventStream.publish(AgentDeath(selfState.id))
+    context.stop(self)
   }
 
   // takes this.worldState and filters it accordingly to the neighbourhood of the agent
   def localWorldState() = {
-    worldState.filter{
-      case (id, AgentState(_, GridLocation(row, col), team, health, ref)) =>
+    worldState.filter {
+      case (id, AgentState(_, GridLocation(row, col), team, _, _)) =>
         id != selfState.id && scala.math.abs(row - selfState.location.row) <= 1 && scala.math.abs(col - selfState.location.col) <= 1
     }
   }
 
+  def spawnChild() = {
+    // spawn child and reduce health by a factor of 2
+    if (selfState.health > 0.75) {
+      val newHealth = selfState.health / 2
+      val initialState = AgentState(
+        // TODO: ensure this is unique!
+        id = scala.util.Random.nextLong,
+        location = GridLocation(scala.util.Random.nextInt(30), scala.util.Random.nextInt(60)),
+        team = selfState.team,
+        health = newHealth, ref = self)
+      context.actorOf(Agent.props(initialState, behaviour))
+      selfState = selfState.copy(health = newHealth)
+    }
+  }
+
+  def regenHealth() = {
+    // TODO: regen health and clip at maxHealth
+    selfState = selfState.copy(health = selfState.health + scala.util.Random.nextDouble)
+  }
   /**
-   * main routine for agent 
+   * main routine for agent
    */
   def action() = {
-
-    // TODO: parse result of behaviour
-    // - update location
-    // - issue attack
     // - cannot issue defend, since this must be implemented in receive
 
-//    val temp = io.github.tdhd.robakka.behaviours.RandomBehaviour(selfState, worldState).act()
-    val temp = io.github.tdhd.robakka.behaviours.SameRowBehaviour(selfState, worldState).act()
+//    regenHealth()
+//    spawnChild()
 
-    // update location
-    selfState = selfState.copy(location = temp)
+    // TODO: limit visibility of the world = localWorldState
+    val commands = behaviour.act(selfState, worldState)
+
+    // filter number of shoots down to 1
+    commands.foreach {
+      // TODO: get world dimensions
+      case MoveUp if selfState.location.row > 1 => selfState = selfState.copy(location = GridLocation(selfState.location.row - 1, selfState.location.col))
+      case MoveDown if selfState.location.row < 30 => selfState = selfState.copy(location = GridLocation(selfState.location.row + 1, selfState.location.col))
+      case MoveLeft if selfState.location.col > 1 => selfState = selfState.copy(location = GridLocation(selfState.location.row, selfState.location.col - 1))
+      case MoveRight if selfState.location.row < 60 => selfState = selfState.copy(location = GridLocation(selfState.location.row, selfState.location.col + 1))
+      case Shoot(ref) => ref ! Attack
+      case _ =>
+    }
 
     // publish own state
     context.system.eventStream.publish(selfState)
   }
 
   def receive = {
+    case AgentSelfAction => action()
     case WorldState(state) =>
       worldState = state
     case Attack =>
-//      scheduler.cancel
-//      context.stop(self)
-      // TODO: context.stop(self) triggers exception
-
-      // TODO: implement a chance to defend
-      // TODO: implement an amount of damage to be taken
-      // TODO: if defending -> more likely to not take damage
-      die()
-      context.system.eventStream.publish(AgentDeath(selfState.id))
-      scheduler.cancel
+      // TODO:
+      // - implement a chance to defend
+      // - implement an amount of damage to be taken
+      // - if defending -> more likely to not take damage
+      selfState = selfState.copy(health = selfState.health - scala.util.Random.nextDouble)
+      if (selfState.health <= 0.0) {
+        die()
+      }
   }
 }
