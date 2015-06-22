@@ -5,18 +5,9 @@ import akka.actor.ActorRef
 case class GridLocation(row: Int, col: Int)
 
 case object AgentSelfAction
-case class AgentState(
-    id: Long,
-    location: GridLocation,
-    team: Boolean,
-    health: Double,
-    ref: ActorRef)
 case class AgentDeath(id: Long)
 
-// current state of the world
-// map from agent id to state of agent
-case class WorldState(state: Map[Long, AgentState])
-
+// agent -> agent
 case object Attack
 
 // world to self
@@ -26,3 +17,12 @@ case object AnnounceWorldState
 case object GetUniqueAgentID
 // world -> agent
 case class UniqueAgentID(id: Long)
+
+sealed trait GameEntity {
+  def position: GridLocation
+}
+case class AgentEntity(position: GridLocation, agentId: Long, team: Boolean, health: Double, ref: ActorRef) extends GameEntity
+case class GrassEntity(position: GridLocation) extends GameEntity
+case class WorldState(entities: List[GameEntity])
+
+

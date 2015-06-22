@@ -54,9 +54,15 @@ class Visualizer(world: ActorRef, worldSize: Size) extends Actor with ActorLoggi
   //    frame.setVisible(true)
   //  }
 
-  def plotVisualState(visualState: Map[Long, AgentState]) = {
-    val ny = visualState.filter { case (_, AgentState(_, _, team, _, _)) => team == false }.size
-    val nx = visualState.filter { case (_, AgentState(_, _, team, _, _)) => team == true }.size
+  def plotVisualState(visualState: WorldState) = {
+    val ny = visualState.entities.filter {
+      case AgentEntity(GridLocation(row, col), id, team, health, ref) => team == false
+      case _ => false
+    }.size
+    val nx = visualState.entities.filter {
+      case AgentEntity(GridLocation(row, col), id, team, health, ref) => team == true
+      case _ => false
+    }.size
 
     println(s"$nx x vs. $ny y")
     println("-" * worldSize.nCols)
@@ -65,8 +71,9 @@ class Visualizer(world: ActorRef, worldSize: Size) extends Actor with ActorLoggi
       j <- 1 to worldSize.nCols
     } {
 
-      val agents = visualState.filter {
-        case (id, AgentState(_, GridLocation(row, col), team, health, ref)) => row == i && col == j
+      val agents = visualState.entities.filter {
+        case AgentEntity(GridLocation(row, col), id, team, health, ref) => row == i && col == j
+        case _ => false
       }
       if (agents.isEmpty) {
         print(" ")
@@ -75,12 +82,13 @@ class Visualizer(world: ActorRef, worldSize: Size) extends Actor with ActorLoggi
           print(agents.size)
         } else {
           agents.foreach {
-            case (id, AgentState(_, location, team, health, _)) =>
+            case AgentEntity(GridLocation(row, col), id, team, health, ref) =>
               if (team) {
                 print("x")
               } else {
                 print("y")
               }
+            case _ => false
           }
         }
       }
@@ -92,7 +100,6 @@ class Visualizer(world: ActorRef, worldSize: Size) extends Actor with ActorLoggi
   }
 
   def receive = {
-    case WorldState(state) =>
-      plotVisualState(state)
+    case ws: WorldState => plotVisualState(ws)
   }
 }

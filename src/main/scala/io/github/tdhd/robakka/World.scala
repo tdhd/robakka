@@ -21,14 +21,14 @@ object World {
 class World(worldSize: Size) extends Actor with ActorLogging {
   import context.dispatcher
 
-  context.system.eventStream.subscribe(self, classOf[AgentState])
+  context.system.eventStream.subscribe(self, classOf[AgentEntity])
   context.system.eventStream.subscribe(self, classOf[AgentDeath])
 
   // announce the worlds state to everyone at a fixed interval
   val scheduler = context.system.scheduler.schedule(0 seconds, 100 milliseconds, self, AnnounceWorldState)
   // TODO: the state of the world should contain more than just the agent state
   // also plants for example
-  var state = Map.empty[Long, AgentState]
+  var state = WorldState(entities = List.empty[GameEntity])
 
   var agentIDCounter: Long = 0
 
@@ -37,7 +37,7 @@ class World(worldSize: Size) extends Actor with ActorLogging {
     agentIDCounter
   }
 
-  def announceState() = context.system.eventStream.publish(WorldState(state))
+  def announceState() = context.system.eventStream.publish(state)
 
   override def postStop() = {
     context.system.eventStream.unsubscribe(self)
@@ -47,32 +47,38 @@ class World(worldSize: Size) extends Actor with ActorLogging {
   // spawns initial Agents
   override def preStart() = {
     for (i <- 1 to 25) {
-      val initialState = AgentState(
-        id = getUniqueAgentID,
-        location = GridLocation(scala.util.Random.nextInt(30), scala.util.Random.nextInt(60)),
-        team = scala.util.Random.nextBoolean,
-        health = 1.0, ref = self)
-//      TODO: load behaviour from command line
+      val entity = AgentEntity(
+          position = GridLocation(scala.util.Random.nextInt(30), scala.util.Random.nextInt(60)),
+          agentId = getUniqueAgentID,
+          team = scala.util.Random.nextBoolean,
+          health = 1.0,
+          ref = self)
+      //      TODO: load behaviour from command line
       val behaviour = io.github.tdhd.robakka.behaviours.SameRowBehaviour
-//      val behaviour = io.github.tdhd.robakka.behaviours.RandomBehaviour
+      //      val behaviour = io.github.tdhd.robakka.behaviours.RandomBehaviour
 
-//      context.watch(context.actorOf(Agent.props(initialState, behaviour)))
-      // dont watch
-      context.actorOf(Agent.props(initialState, behaviour))
+      context.actorOf(Agent.props(entity, behaviour))
     }
   }
 
+  def removeAgentFromWorld(agentId: Long) = {
+      state = WorldState {
+        state.entities.filterNot {
+          case AgentEntity(_, id, _, _, _) => id == agentId
+          case _ => false
+        }
+      }
+  }
+
+  def addAgentToWorld(entity: AgentEntity) = state = WorldState { state.entities ++ List(entity) }
+
   def receive = {
-    case Terminated(ref) =>
     case AnnounceWorldState => announceState
     case GetUniqueAgentID => sender ! UniqueAgentID(getUniqueAgentID)
 
-    case AgentDeath(id) =>
-      state -= id
-    case AgentState(id, location, team, health, ref) =>
-      if (state.contains(id)) {
-        state -= id
-      }
-      state += (id -> AgentState(id, location, team, health, ref))
+    case AgentDeath(deadId) => removeAgentFromWorld(deadId)
+    case agentEntity: AgentEntity =>
+      removeAgentFromWorld(agentEntity.agentId)
+      addAgentToWorld(agentEntity)
   }
 }

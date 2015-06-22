@@ -3,7 +3,7 @@ package io.github.tdhd.robakka.behaviours
 import io.github.tdhd.robakka._
 
 case object RandomBehaviour extends BaseBehaviour {
-  def act(selfState: AgentState, worldState: Map[Long, AgentState]) = {
+  def act(entity: AgentEntity, worldState: WorldState) = {
 
     val commands: List[AgentCommand] = (1 to 4).map {
       i =>
