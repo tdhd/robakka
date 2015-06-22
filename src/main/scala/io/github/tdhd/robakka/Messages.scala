@@ -18,3 +18,11 @@ case class AgentDeath(id: Long)
 case class WorldState(state: Map[Long, AgentState])
 
 case object Attack
+
+// world to self
+case object AnnounceWorldState
+
+// agent -> world
+case object GetUniqueAgentID
+// world -> agent
+case class UniqueAgentID(id: Long)

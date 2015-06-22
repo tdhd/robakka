@@ -22,7 +22,7 @@ object Agent {
 class Agent(initialState: AgentState, behaviour: BaseBehaviour) extends Actor with ActorLogging {
   import context.dispatcher
   // for ? pattern
-  //  implicit val timeout = Timeout(1 seconds)
+  implicit val timeout = Timeout(1 seconds)
 
   // subscribe to changes of the world
   context.system.eventStream.subscribe(self, classOf[WorldState])
@@ -32,7 +32,7 @@ class Agent(initialState: AgentState, behaviour: BaseBehaviour) extends Actor wi
   // update reference: if not copied, the ref of the world is kept
   var selfState = initialState.copy(ref = self)
 
-  // val world = context.parent
+  val world = context.parent
   var worldState = Map.empty[Long, AgentState]
 
   // schedule messages to self
@@ -54,18 +54,27 @@ class Agent(initialState: AgentState, behaviour: BaseBehaviour) extends Actor wi
     }
   }
 
-  def spawnChild() = {
-    // spawn child and reduce health by a factor of 2
-    if (selfState.health > 0.75) {
-      val newHealth = selfState.health / 2
-      val initialState = AgentState(
-        // TODO: ensure this is unique!
-        id = scala.util.Random.nextLong,
-        location = GridLocation(scala.util.Random.nextInt(30), scala.util.Random.nextInt(60)),
-        team = selfState.team,
-        health = newHealth, ref = self)
-      context.actorOf(Agent.props(initialState, behaviour))
-      selfState = selfState.copy(health = newHealth)
+  /**
+   * Spawn a child when this.health > lowerHealthThreshold
+   * and split health evenly between this and child
+   *
+   * TODO: childs creating childs does not work, they don't have the correct reference to the world
+   * -> forward messages from childs to this.world
+   * -> OR pass reference to world in constructor
+   */
+  def spawnChild(lowerHealthThreshold: Double = 0.75, healthReductionFactor: Double = 2.0) = {
+    if (selfState.health > lowerHealthThreshold) {
+      val newHealth = selfState.health / healthReductionFactor
+      (world ? GetUniqueAgentID).mapTo[UniqueAgentID].onSuccess {
+        case UniqueAgentID(spawnId) =>
+          val initialState = AgentState(
+            id = spawnId,
+            location = GridLocation(scala.util.Random.nextInt(30), scala.util.Random.nextInt(60)),
+            team = selfState.team,
+            health = newHealth, ref = self)
+          context.actorOf(Agent.props(initialState, behaviour))
+          selfState = selfState.copy(health = newHealth)
+      }
     }
   }
 
@@ -79,8 +88,8 @@ class Agent(initialState: AgentState, behaviour: BaseBehaviour) extends Actor wi
   def action() = {
     // - cannot issue defend, since this must be implemented in receive
 
-//    regenHealth()
-//    spawnChild()
+    //    regenHealth()
+    //    spawnChild()
 
     // TODO: limit visibility of the world = localWorldState
     val commands = behaviour.act(selfState, worldState)
