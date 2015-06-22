@@ -1,10 +1,9 @@
 package io.github.tdhd.robakka.behaviours
 
-import io.github.tdhd.robakka.GridLocation
+import io.github.tdhd.robakka._
 
-// TODO: define here what run should return
-// act has to return a set of commands: move, attack, defend
+// act returns a set of commands: move, attack, defend
 trait BaseBehaviour {
-  def act(): GridLocation
+  def act(selfState: AgentState, worldState: Map[Long, AgentState]): List[AgentCommand]
 }
 

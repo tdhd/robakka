@@ -1,10 +1,9 @@
 package io.github.tdhd.robakka.behaviours
 
-import io.github.tdhd.robakka.GridLocation
-import io.github.tdhd.robakka.AgentState
+import io.github.tdhd.robakka._
 
-case class SameRowBehaviour(selfState: AgentState, worldState: Map[Long, AgentState]) extends BaseBehaviour {
-  def act() = {
+case object SameRowBehaviour extends BaseBehaviour {
+  def act(selfState: AgentState, worldState: Map[Long, AgentState]) = {
     val enemiesOnSameRow = worldState.filter {
       case (id, AgentState(_, GridLocation(row, col), team, health, ref)) =>
         id != selfState.id && team != selfState.team && row == selfState.location.row
@@ -15,20 +14,25 @@ case class SameRowBehaviour(selfState: AgentState, worldState: Map[Long, AgentSt
         id != selfState.id && team == selfState.team && row == selfState.location.row
     }.isEmpty
 
-    val res = if (teamOnSameRow) {
+    val shootings: List[AgentCommand] = enemiesOnSameRow.map {
+      case (_, AgentState(_, _, _, _, ref)) => Shoot(ref)
+    }.toList
+
+    val res: AgentCommand = if (teamOnSameRow) {
       if (scala.util.Random.nextBoolean) {
-        GridLocation(selfState.location.row, selfState.location.col - 1)
+        MoveLeft
       } else {
-        GridLocation(selfState.location.row, selfState.location.col + 1)
+        MoveRight
       }
     } else {
       if (scala.util.Random.nextBoolean) {
-        GridLocation(selfState.location.row - 1, selfState.location.col)
+        MoveDown
       } else {
-        GridLocation(selfState.location.row + 1, selfState.location.col)
+        MoveUp
       }
     }
-    res
+
+    List(res) ++ shootings
   }
 }
 
