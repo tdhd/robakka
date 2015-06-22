@@ -62,7 +62,7 @@ class Visualizer(world: ActorRef, worldSize: Size) extends Actor with ActorLoggi
     } {
 
       val agents = visualState.filter {
-        case (id, AgentState(_, team, GridLocation(row, col), ref)) => row == i && col == j
+        case (id, AgentState(_, GridLocation(row, col), team, health, ref)) => row == i && col == j
       }
       if (agents.isEmpty) {
         print(" ")
@@ -71,7 +71,7 @@ class Visualizer(world: ActorRef, worldSize: Size) extends Actor with ActorLoggi
           print(agents.size)
         } else {
           agents.foreach {
-            case (id, AgentState(_, team, _, _)) =>
+            case (id, AgentState(_, location, team, health, _)) =>
               if (team) {
                 print("x")
               } else {

@@ -46,10 +46,10 @@ class World(worldSize: Size) extends Actor with ActorLogging {
   def receive = {
     case AgentDeath(id) =>
       state -= id
-    case AgentState(id, team, location, ref) =>
+    case AgentState(id, location, team, health, ref) =>
       if (state.contains(id)) {
         state -= id
       }
-      state += (id -> AgentState(id, team, location, ref))
+      state += (id -> AgentState(id, location, team, health, ref))
   }
 }

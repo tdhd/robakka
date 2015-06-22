@@ -23,11 +23,18 @@ class Agent extends Actor with ActorLogging {
   context.system.eventStream.subscribe(self, classOf[WorldState])
 
   // TODO: ensure this is unique!
-  val id = scala.util.Random.nextLong
-  var location = GridLocation(scala.util.Random.nextInt(30), scala.util.Random.nextInt(60))
+//  val id = scala.util.Random.nextLong
+//  var location = 
   // TODO: make this Int
-  val team = scala.util.Random.nextBoolean
-  var health = 1.0
+//  val team = scala.util.Random.nextBoolean
+//  var health = 1.0
+  // TODO: aggressive, defensive
+  // val stance = false
+  var selfState = AgentState(
+      scala.util.Random.nextLong,
+      GridLocation(scala.util.Random.nextInt(30), scala.util.Random.nextInt(60)),
+      scala.util.Random.nextBoolean,
+      1.0, self)
 
   val world = context.parent
   var worldState = Map.empty[Long, AgentState]
@@ -35,7 +42,7 @@ class Agent extends Actor with ActorLogging {
   // scheduler for the action of an agent
   val scheduler = context.system.scheduler.schedule(0 seconds, 250 milliseconds)(action)
 
-  def die() = context.system.eventStream.publish(AgentDeath(id))
+  def die() = context.system.eventStream.publish(AgentDeath(selfState.id))
 
   override def postStop() = {
     context.system.eventStream.unsubscribe(self)
@@ -44,63 +51,29 @@ class Agent extends Actor with ActorLogging {
   // takes this.worldState and filters it accordingly to the neighbourhood of the agent
   def localWorldState() = {
     worldState.filter{
-      case (id, AgentState(_, team, GridLocation(row, col), ref)) =>
-        id != this.id && scala.math.abs(row - location.row) <= 1 && scala.math.abs(col - location.col) <= 1
+      case (id, AgentState(_, GridLocation(row, col), team, health, ref)) =>
+        id != selfState.id && scala.math.abs(row - selfState.location.row) <= 1 && scala.math.abs(col - selfState.location.col) <= 1
     }
   }
 
   /**
-   * main routine for agent
-   * at the moment this is a playground for different techniques
+   * main routine for agent 
    */
   def action() = {
-//    val teamOnSameRowLocal = ! localWorldState().filter{
-//      case (id, AgentState(_, team, GridLocation(row, col), ref)) =>
-//        id != this.id && team == this.team && row == this.location.row
-//    }.isEmpty
 
-    val enemiesOnSameRow = worldState.filter{
-      case (id, AgentState(_, team, GridLocation(row, col), ref)) =>
-        id != this.id && team != this.team && row == this.location.row
-    }
-    enemiesOnSameRow.foreach{
-      case (id, AgentState(_, _, _, ref)) =>
-        ref ! Attack
-    }
+    // TODO: parse result of behaviour
+    // - update location
+    // - issue attack
+    // - cannot issue defend, since this must be implemented in receive
 
-    val teamOnSameRow = ! worldState.filter{
-      case (id, AgentState(_, team, GridLocation(row, col), ref)) =>
-        id != this.id && team == this.team && row == this.location.row
-    }.isEmpty
+//    val temp = io.github.tdhd.robakka.behaviours.RandomBehaviour(selfState, worldState).act()
+    val temp = io.github.tdhd.robakka.behaviours.SameRowBehaviour(selfState, worldState).act()
 
-    if (teamOnSameRow) {
-      if(scala.util.Random.nextBoolean) {
-        location = GridLocation(location.row, location.col-1)
-      } else {
-        location = GridLocation(location.row, location.col+1)
-      }
-    } else {
-      if(scala.util.Random.nextBoolean) {
-        location = GridLocation(location.row -1, location.col)
-      } else {
-        location = GridLocation(location.row + 1, location.col)
-      }
-    }
-
-////     random mover
-//    (scala.util.Random.nextBoolean, scala.util.Random.nextBoolean) match {
-//      case (true, true) =>
-//        location = GridLocation(location.row + 1, location.col - 1)
-//      case (false, true) =>
-//        location = GridLocation(location.row - 1, location.col - 1)
-//      case (true, false) =>
-//        location = GridLocation(location.row + 1, location.col + 1)
-//      case (false, false) =>
-//        location = GridLocation(location.row - 1, location.col + 1)
-//    }
+    // update location
+    selfState = selfState.copy(location = temp)
 
     // publish own state
-    context.system.eventStream.publish(AgentState(id, team, location, self))
+    context.system.eventStream.publish(selfState)
   }
 
   def receive = {
@@ -110,8 +83,12 @@ class Agent extends Actor with ActorLogging {
 //      scheduler.cancel
 //      context.stop(self)
       // TODO: context.stop(self) triggers exception
+
+      // TODO: implement a chance to defend
+      // TODO: implement an amount of damage to be taken
+      // TODO: if defending -> more likely to not take damage
       die()
-      context.system.eventStream.publish(AgentDeath(id))
+      context.system.eventStream.publish(AgentDeath(selfState.id))
       scheduler.cancel
   }
 }
