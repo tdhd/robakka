@@ -46,6 +46,13 @@ class World(worldSize: Size) extends Actor with ActorLogging {
 
   // spawns initial Agents
   override def preStart() = {
+    // create grass everywhere
+    for{i <- 1 to worldSize.nRows
+    	j <- 1 to worldSize.nCols} {
+    	  val grassEntity = GrassEntity(position = GridLocation(row = i, col = j))
+    	  state = WorldState{state.entities ++ List(grassEntity)}
+    	}
+    
     for (i <- 1 to 25) {
       val entity = AgentEntity(
           position = GridLocation(scala.util.Random.nextInt(30), scala.util.Random.nextInt(60)),
