@@ -4,6 +4,6 @@ import io.github.tdhd.robakka._
 
 // act returns a set of commands: move, attack, defend
 trait BaseBehaviour {
-  def act(entity: AgentEntity, worldState: WorldState): List[AgentCommand]
+  def act(entity: AgentEntity, worldState: WorldState): Iterable[AgentCommand]
 }
 

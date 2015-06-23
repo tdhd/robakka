@@ -18,7 +18,7 @@ case object SameRowBehaviour extends BaseBehaviour {
 
     val shootings: List[AgentCommand] = enemiesOnSameRow.map {
       case AgentEntity(_, _, _, _, ref, _) => Shoot(ref)
-    }.toList
+    }
 
     val res: AgentCommand = if (teamOnSameRow) {
       if (scala.util.Random.nextBoolean) {
