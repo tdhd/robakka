@@ -5,19 +5,19 @@ import io.github.tdhd.robakka._
 case object SameRowBehaviour extends BaseBehaviour {
   def act(entity: AgentEntity, worldState: WorldState) = {
     val enemiesOnSameRow = worldState.entities.filter {
-      case AgentEntity(GridLocation(row, col), id, team, health, ref) =>
+      case AgentEntity(GridLocation(row, col), id, team, health, ref, world) =>
         id != entity.agentId && team != entity.team && row == entity.position.row
       case _ => false
     }
 
     val teamOnSameRow = !worldState.entities.filter {
-      case AgentEntity(GridLocation(row, col), id, team, health, ref) =>
+      case AgentEntity(GridLocation(row, col), id, team, health, ref, world) =>
         id != entity.agentId && team == entity.team && row == entity.position.row
       case _ => false
     }.isEmpty
 
     val shootings: List[AgentCommand] = enemiesOnSameRow.map {
-      case AgentEntity(_, _, _, _, ref) => Shoot(ref)
+      case AgentEntity(_, _, _, _, ref, _) => Shoot(ref)
     }.toList
 
     val res: AgentCommand = if (teamOnSameRow) {

@@ -30,9 +30,8 @@ class Agent(entity: AgentEntity, behaviour: BaseBehaviour) extends Actor with Ac
   // TODO: aggressive, defensive
   // val stance = false
   // update reference: if not copied, the ref of the world is kept
-  var selfState = entity.copy(ref = self)
+  var selfState = entity.copy(selfRef = self)
 
-  val world = context.parent
   var worldState = WorldState(entities = List.empty[GameEntity])
 
   // schedule messages to self
@@ -59,22 +58,15 @@ class Agent(entity: AgentEntity, behaviour: BaseBehaviour) extends Actor with Ac
   /**
    * Spawn a child when this.health > lowerHealthThreshold
    * and split health evenly between this and child
-   *
-   * TODO: children creating children does not work, they don't have the correct reference to the world
-   * -> forward messages from children to this.world
-   * -> OR pass reference to world in constructor
    */
   def spawnChild(lowerHealthThreshold: Double = 0.75, healthReductionFactor: Double = 2.0) = {
     if (selfState.health > lowerHealthThreshold) {
       val newHealth = selfState.health / healthReductionFactor
-      (world ? GetUniqueAgentID).mapTo[UniqueAgentID].onSuccess {
+      (selfState.world ? GetUniqueAgentID).mapTo[UniqueAgentID].onSuccess {
         case UniqueAgentID(spawnId) =>
-          val entity = AgentEntity(
-            agentId = spawnId,
-            position = GridLocation(scala.util.Random.nextInt(30), scala.util.Random.nextInt(60)),
-            team = selfState.team,
-            health = newHealth, ref = self)
-          context.actorOf(Agent.props(entity, behaviour))
+          // create copy of self and spawn child, reduce own health
+          val agentEntity = selfState.copy(agentId = spawnId, health = newHealth)
+          context.actorOf(Agent.props(agentEntity, behaviour))
           selfState = selfState.copy(health = newHealth)
       }
     }
@@ -83,7 +75,7 @@ class Agent(entity: AgentEntity, behaviour: BaseBehaviour) extends Actor with Ac
   def printAgentWorldState() = {
     localWorldState.entities.foreach {
       case GrassEntity(GridLocation(row, col)) => println(s"grass at ($row, $col")
-      case AgentEntity(GridLocation(row, col), _, _, _, _) => println(s"agent at ($row, $col)")
+      case AgentEntity(GridLocation(row, col), _, _, _, _, _) => println(s"agent at ($row, $col)")
       case _ =>
     }
   }
@@ -91,21 +83,20 @@ class Agent(entity: AgentEntity, behaviour: BaseBehaviour) extends Actor with Ac
    * regenerate health and clip and maximum health
    */
   def regenHealth() = {
-    val newHealth = selfState.health + scala.util.Random.nextDouble match {
-      case i if i > 1.0 => 1.0
-      case i => i
+    selfState = selfState.health + scala.util.Random.nextDouble match {
+      case i if i > 1.0 => selfState.copy(health = 1.0)
+      case i => selfState.copy(health = i)
     }
-    selfState = selfState.copy(health = newHealth)
   }
 
   /**
    * main routine for agent
+   * 
+   * the agent behaviour returns a list of commands the agents then follows
    */
   def action() = {
-    // - cannot issue defend, since this must be implemented in receive
-
-    //    regenHealth()
-    //        spawnChild()
+//    regenHealth()
+//    spawnChild()
 
     val commands = behaviour.act(selfState, localWorldState)
 

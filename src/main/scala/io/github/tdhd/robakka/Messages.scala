@@ -20,6 +20,11 @@ case class AgentDeath(agent: AgentEntity)
 sealed trait GameEntity {
   def position: GridLocation
 }
-case class AgentEntity(position: GridLocation, agentId: Long, team: Boolean, health: Double, ref: ActorRef) extends GameEntity
+case class AgentEntity(position: GridLocation,
+  agentId: Long,
+  team: Boolean,
+  health: Double,
+  selfRef: ActorRef,
+  world: ActorRef) extends GameEntity
 case class GrassEntity(position: GridLocation) extends GameEntity
 case class WorldState(entities: List[GameEntity])

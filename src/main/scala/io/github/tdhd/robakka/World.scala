@@ -57,7 +57,8 @@ class World(worldSize: Size) extends Actor with ActorLogging {
           agentId = getUniqueAgentID,
           team = scala.util.Random.nextBoolean,
           health = 1.0,
-          ref = self)
+          selfRef = self,
+          world = self)
       //      TODO: load behaviour from command line
       val behaviour = io.github.tdhd.robakka.behaviours.SameRowBehaviour
       //      val behaviour = io.github.tdhd.robakka.behaviours.RandomBehaviour
@@ -69,7 +70,7 @@ class World(worldSize: Size) extends Actor with ActorLogging {
   def removeAgentFromWorld(agentId: Long) = {
       state = WorldState {
         state.entities.filterNot {
-          case AgentEntity(_, id, _, _, _) => id == agentId
+          case AgentEntity(_, id, _, _, _, _) => id == agentId
           case _ => false
         }
       }

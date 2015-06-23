@@ -56,11 +56,11 @@ class Visualizer(world: ActorRef, worldSize: Size) extends Actor with ActorLoggi
 
   def plotVisualState(visualState: WorldState) = {
     val ny = visualState.entities.filter {
-      case AgentEntity(GridLocation(row, col), id, team, health, ref) => team == false
+      case AgentEntity(GridLocation(row, col), id, team, health, ref, world) => team == false
       case _ => false
     }.size
     val nx = visualState.entities.filter {
-      case AgentEntity(GridLocation(row, col), id, team, health, ref) => team == true
+      case AgentEntity(GridLocation(row, col), id, team, health, ref, world) => team == true
       case _ => false
     }.size
 
@@ -72,7 +72,7 @@ class Visualizer(world: ActorRef, worldSize: Size) extends Actor with ActorLoggi
     } {
 
       val agents = visualState.entities.filter {
-        case AgentEntity(GridLocation(row, col), id, team, health, ref) => row == i && col == j
+        case AgentEntity(GridLocation(row, col), id, team, health, ref, world) => row == i && col == j
         case _ => false
       }
 
@@ -83,7 +83,7 @@ class Visualizer(world: ActorRef, worldSize: Size) extends Actor with ActorLoggi
           print(agents.size)
         } else {
           agents.foreach {
-            case AgentEntity(GridLocation(row, col), id, team, health, ref) =>
+            case AgentEntity(GridLocation(row, col), id, team, health, ref, world) =>
               if (team) {
                 print("x")
               } else {
