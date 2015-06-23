@@ -75,11 +75,6 @@ class Visualizer(world: ActorRef, worldSize: Size) extends Actor with ActorLoggi
         case AgentEntity(GridLocation(row, col), id, team, health, ref) => row == i && col == j
         case _ => false
       }
-//      // TODO
-//      val grass = visualState.entities.filter {
-//        case GrassEntity(GridLocation(row, col)) => row == i && col == j
-//        case _ => false
-//      }
 
       if (agents.isEmpty) {
         print(" ")

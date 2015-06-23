@@ -25,11 +25,9 @@ class World(worldSize: Size) extends Actor with ActorLogging {
   context.system.eventStream.subscribe(self, classOf[AgentDeath])
 
   // announce the worlds state to everyone at a fixed interval
-  val scheduler = context.system.scheduler.schedule(0 seconds, 100 milliseconds, self, AnnounceWorldState)
-  // TODO: the state of the world should contain more than just the agent state
-  // also plants for example
-  var state = WorldState(entities = List.empty[GameEntity])
+  val scheduler = context.system.scheduler.schedule(0 seconds, 1000 milliseconds, self, AnnounceWorldState)
 
+  var state = WorldState(entities = List.empty[GameEntity])
   var agentIDCounter: Long = 0
 
   def getUniqueAgentID() = {
@@ -52,7 +50,7 @@ class World(worldSize: Size) extends Actor with ActorLogging {
     	  val grassEntity = GrassEntity(position = GridLocation(row = i, col = j))
     	  state = WorldState{state.entities ++ List(grassEntity)}
     	}
-    
+
     for (i <- 1 to 25) {
       val entity = AgentEntity(
           position = GridLocation(scala.util.Random.nextInt(30), scala.util.Random.nextInt(60)),
@@ -77,13 +75,13 @@ class World(worldSize: Size) extends Actor with ActorLogging {
       }
   }
 
-  def addAgentToWorld(entity: AgentEntity) = state = WorldState { state.entities ++ List(entity) }
+  def addAgentToWorld(entity: AgentEntity) = state = WorldState { state.entities :+ entity }
 
   def receive = {
     case AnnounceWorldState => announceState
     case GetUniqueAgentID => sender ! UniqueAgentID(getUniqueAgentID)
 
-    case AgentDeath(deadId) => removeAgentFromWorld(deadId)
+    case AgentDeath(agent) => removeAgentFromWorld(agent.agentId)
     case agentEntity: AgentEntity =>
       removeAgentFromWorld(agentEntity.agentId)
       addAgentToWorld(agentEntity)

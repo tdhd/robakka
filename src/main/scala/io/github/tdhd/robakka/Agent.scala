@@ -42,15 +42,17 @@ class Agent(entity: AgentEntity, behaviour: BaseBehaviour) extends Actor with Ac
 
   def die() = {
     scheduler.cancel
-    context.system.eventStream.publish(AgentDeath(selfState.agentId))
+    context.system.eventStream.publish(AgentDeath(selfState))
     context.stop(self)
   }
 
   // takes this.worldState and filters it accordingly to the neighbourhood of the agent
   def localWorldState() = {
-    worldState.entities.filter {
-      case entity: GameEntity =>
-        scala.math.abs(entity.position.row - selfState.position.row) <= 1 && scala.math.abs(entity.position.col - selfState.position.col) <= 1 
+    WorldState {
+      worldState.entities.filter {
+        case entity: GameEntity =>
+          scala.math.abs(entity.position.row - selfState.position.row) <= 1 && scala.math.abs(entity.position.col - selfState.position.col) <= 1
+      }
     }
   }
 
@@ -58,8 +60,8 @@ class Agent(entity: AgentEntity, behaviour: BaseBehaviour) extends Actor with Ac
    * Spawn a child when this.health > lowerHealthThreshold
    * and split health evenly between this and child
    *
-   * TODO: childs creating childs does not work, they don't have the correct reference to the world
-   * -> forward messages from childs to this.world
+   * TODO: children creating children does not work, they don't have the correct reference to the world
+   * -> forward messages from children to this.world
    * -> OR pass reference to world in constructor
    */
   def spawnChild(lowerHealthThreshold: Double = 0.75, healthReductionFactor: Double = 2.0) = {
@@ -78,9 +80,22 @@ class Agent(entity: AgentEntity, behaviour: BaseBehaviour) extends Actor with Ac
     }
   }
 
+  def printAgentWorldState() = {
+    localWorldState.entities.foreach {
+      case GrassEntity(GridLocation(row, col)) => println(s"grass at ($row, $col")
+      case AgentEntity(GridLocation(row, col), _, _, _, _) => println(s"agent at ($row, $col)")
+      case _ =>
+    }
+  }
+  /**
+   * regenerate health and clip and maximum health
+   */
   def regenHealth() = {
-    // TODO: regen health and clip at maxHealth
-    selfState = selfState.copy(health = selfState.health + scala.util.Random.nextDouble)
+    val newHealth = selfState.health + scala.util.Random.nextDouble match {
+      case i if i > 1.0 => 1.0
+      case i => i
+    }
+    selfState = selfState.copy(health = newHealth)
   }
 
   /**
@@ -92,8 +107,7 @@ class Agent(entity: AgentEntity, behaviour: BaseBehaviour) extends Actor with Ac
     //    regenHealth()
     //        spawnChild()
 
-    // TODO: limit visibility of the world = localWorldState
-    val commands = behaviour.act(selfState, worldState)
+    val commands = behaviour.act(selfState, localWorldState)
 
     // filter number of shoots down to 1
     commands.foreach {
@@ -106,7 +120,6 @@ class Agent(entity: AgentEntity, behaviour: BaseBehaviour) extends Actor with Ac
       case _ =>
     }
 
-    // TODO: publish AgentEntity
     // publish own state
     context.system.eventStream.publish(selfState)
   }
