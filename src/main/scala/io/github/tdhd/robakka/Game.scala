@@ -9,16 +9,19 @@ import akka.actor.Props
 import akka.actor.Terminated
 import akka.actor.Cancellable
 import akka.util.Timeout
+import io.github.tdhd.robakka.behaviours.BaseBehaviour
+
+case class GameTeam(id: Long, behaviour: BaseBehaviour)
 
 object Game {
-  def props(): Props = Props(new Game())
+  def props(teams: Iterable[GameTeam]): Props = Props(new Game(teams))
 }
 
-class Game extends Actor with ActorLogging {
+class Game(teams: Iterable[GameTeam]) extends Actor with ActorLogging {
   import context.dispatcher
 
   val worldSize = Size(30, 60)
-  val world = context.watch(context.actorOf(World.props(worldSize), "world"))
+  val world = context.watch(context.actorOf(World.props(teams, worldSize), "world"))
   val visualizer = context.watch(context.actorOf(Visualizer.props(world, worldSize ), "visualizer"))
 
 //  override def preStart() = {}

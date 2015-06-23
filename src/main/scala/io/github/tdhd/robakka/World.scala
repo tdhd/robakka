@@ -15,10 +15,10 @@ import scala.concurrent.Future
 case class Size(nRows: Int, nCols: Int)
 
 object World {
-  def props(worldSize: Size) = Props(new World(worldSize))
+  def props(teams: Iterable[GameTeam], worldSize: Size) = Props(new World(teams, worldSize))
 }
 
-class World(worldSize: Size) extends Actor with ActorLogging {
+class World(teams: Iterable[GameTeam], worldSize: Size) extends Actor with ActorLogging {
   import context.dispatcher
 
   context.system.eventStream.subscribe(self, classOf[AgentEntity])
@@ -45,35 +45,36 @@ class World(worldSize: Size) extends Actor with ActorLogging {
   // spawns initial Agents
   override def preStart() = {
     // create grass everywhere
-    for{i <- 1 to worldSize.nRows
-    	j <- 1 to worldSize.nCols} {
-    	  val grassEntity = GrassEntity(position = GridLocation(row = i, col = j))
-    	  state = WorldState{state.entities ++ List(grassEntity)}
-    	}
+    for {
+      i <- 1 to worldSize.nRows
+      j <- 1 to worldSize.nCols
+    } {
+      val grassEntity = GrassEntity(position = GridLocation(row = i, col = j))
+      state = WorldState { state.entities :+ grassEntity }
+    }
 
-    for (i <- 1 to 25) {
-      val entity = AgentEntity(
-          position = GridLocation(scala.util.Random.nextInt(30), scala.util.Random.nextInt(60)),
-          agentId = getUniqueAgentID,
-          team = scala.util.Random.nextBoolean,
-          health = 1.0,
-          selfRef = self,
-          world = self)
-      //      TODO: load behaviour from command line
-      val behaviour = io.github.tdhd.robakka.behaviours.SameRowBehaviour
-      //      val behaviour = io.github.tdhd.robakka.behaviours.RandomBehaviour
-
-      context.actorOf(Agent.props(entity, behaviour, worldSize))
+    teams.foreach {
+      team =>
+        for (i <- 1 to 25) {
+          val entity = AgentEntity(
+            position = GridLocation(scala.util.Random.nextInt(30), scala.util.Random.nextInt(60)),
+            agentId = getUniqueAgentID,
+            team = team.id,
+            health = 1.0,
+            selfRef = self,
+            world = self)
+          context.actorOf(Agent.props(entity, team.behaviour, worldSize))
+        }
     }
   }
 
   def removeAgentFromWorld(agentId: Long) = {
-      state = WorldState {
-        state.entities.filterNot {
-          case AgentEntity(_, id, _, _, _, _) => id == agentId
-          case _ => false
-        }
+    state = WorldState {
+      state.entities.filterNot {
+        case AgentEntity(_, id, _, _, _, _) => id == agentId
+        case _ => false
       }
+    }
   }
 
   def addAgentToWorld(entity: AgentEntity) = state = WorldState { state.entities :+ entity }

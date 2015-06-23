@@ -22,7 +22,7 @@ sealed trait GameEntity {
 }
 case class AgentEntity(position: GridLocation,
   agentId: Long,
-  team: Boolean,
+  team: Long,
   health: Double,
   selfRef: ActorRef,
   world: ActorRef) extends GameEntity

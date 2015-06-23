@@ -12,14 +12,34 @@ import akka.actor.ActorLogging
 import akka.actor.Cancellable
 import akka.actor.Props
 
+case class RobakkaConfig(agentBehaviours: Seq[String] = List(""))
+
 object Robakka {
   def main(args: Array[String]): Unit = {
 
-    val system = ActorSystem("system")
-    val game = system.actorOf(Props[Game], "Game")
+    val parser = new scopt.OptionParser[RobakkaConfig]("Robakka") {
+      head("Robakka", "0.1")
+      opt[Seq[String]]('b', "behaviours") required () valueName ("SameRow,Random,...") action { (x, c) =>
+        c.copy(agentBehaviours = x)
+      } text ("agent behaviours to install")
+      help("help") text ("print help")
+    }
 
-    Thread.sleep(30000)
-//    system.awaitTermination(5 seconds)
-    system.shutdown()
+    // if cmdLineConfig is not Some(...) then
+    // the arguments are bad, error message will have been displayed
+    parser.parse(args, RobakkaConfig()).foreach {
+      cmdLineConfig =>
+        val teams = cmdLineConfig.agentBehaviours.map(_.toLowerCase).map {
+          case "samerow" => io.github.tdhd.robakka.behaviours.SameRowBehaviour
+          case "random" => io.github.tdhd.robakka.behaviours.RandomBehaviour
+        }.zipWithIndex.map(x => GameTeam(x._2, x._1))
+
+        val system = ActorSystem("system")
+        val game = system.actorOf(Game.props(teams), "Game")
+
+        Thread.sleep(30000)
+        //    system.awaitTermination(5 seconds)
+        system.shutdown()
+    }
   }
 }

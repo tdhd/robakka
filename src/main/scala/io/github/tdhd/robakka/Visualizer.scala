@@ -55,16 +55,24 @@ class Visualizer(world: ActorRef, worldSize: Size) extends Actor with ActorLoggi
   //  }
 
   def plotVisualState(visualState: WorldState) = {
-    val ny = visualState.entities.filter {
-      case AgentEntity(GridLocation(row, col), id, team, health, ref, world) => team == false
+    // TODO: no more than three teams
+    val teamVisualizers = List("x", "y", "z")
+    val uniqueTeams = visualState.entities.filter {
+      case agent: AgentEntity => true
       case _ => false
-    }.size
-    val nx = visualState.entities.filter {
-      case AgentEntity(GridLocation(row, col), id, team, health, ref, world) => team == true
-      case _ => false
-    }.size
+    }.map { _.asInstanceOf[AgentEntity].team }.distinct.zipWithIndex
+    assert(uniqueTeams.size <= 3)
 
-    println(s"$nx x vs. $ny y")
+    // print team status
+    uniqueTeams.foreach {
+      case (teamId, index) =>
+        val n = visualState.entities.filter {
+          case AgentEntity(GridLocation(row, col), id, team, health, ref, world) => team == teamId
+          case _ => false
+        }.size
+        println(s"${teamVisualizers(index)}: $n")
+    }
+
     println("-" * worldSize.nCols)
     for {
       i <- 1 to worldSize.nRows
@@ -84,11 +92,12 @@ class Visualizer(world: ActorRef, worldSize: Size) extends Actor with ActorLoggi
         } else {
           agents.foreach {
             case AgentEntity(GridLocation(row, col), id, team, health, ref, world) =>
-              if (team) {
-                print("x")
-              } else {
-                print("y")
+              val teamColor = teamVisualizers {
+                uniqueTeams.filter {
+                  case (teamId, index) => teamId == team
+                }.map(_._2).head
               }
+              print(teamColor)
             case _ => false
           }
         }
