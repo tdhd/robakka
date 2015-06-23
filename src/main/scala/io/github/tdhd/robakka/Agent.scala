@@ -14,12 +14,12 @@ import akka.pattern.{ ask, pipe }
 import io.github.tdhd.robakka.behaviours._
 
 object Agent {
-  def props(entity: AgentEntity, behaviour: BaseBehaviour) = {
-    Props(new Agent(entity, behaviour))
+  def props(entity: AgentEntity, behaviour: BaseBehaviour, worldSize: Size) = {
+    Props(new Agent(entity, behaviour, worldSize))
   }
 }
 
-class Agent(entity: AgentEntity, behaviour: BaseBehaviour) extends Actor with ActorLogging {
+class Agent(entity: AgentEntity, behaviour: BaseBehaviour, worldSize: Size) extends Actor with ActorLogging {
   import context.dispatcher
   // for ? pattern
   implicit val timeout = Timeout(1 seconds)
@@ -66,7 +66,7 @@ class Agent(entity: AgentEntity, behaviour: BaseBehaviour) extends Actor with Ac
         case UniqueAgentID(spawnId) =>
           // create copy of self and spawn child, reduce own health
           val agentEntity = selfState.copy(agentId = spawnId, health = newHealth)
-          context.actorOf(Agent.props(agentEntity, behaviour))
+          context.actorOf(Agent.props(agentEntity, behaviour, worldSize))
           selfState = selfState.copy(health = newHealth)
       }
     }
@@ -102,11 +102,10 @@ class Agent(entity: AgentEntity, behaviour: BaseBehaviour) extends Actor with Ac
 
     // filter number of shoots down to 1
     commands.foreach {
-      // TODO: get world dimensions
       case MoveUp if selfState.position.row > 1 => selfState = selfState.copy(position = GridLocation(selfState.position.row - 1, selfState.position.col))
-      case MoveDown if selfState.position.row < 30 => selfState = selfState.copy(position = GridLocation(selfState.position.row + 1, selfState.position.col))
+      case MoveDown if selfState.position.row < worldSize.nRows => selfState = selfState.copy(position = GridLocation(selfState.position.row + 1, selfState.position.col))
       case MoveLeft if selfState.position.col > 1 => selfState = selfState.copy(position = GridLocation(selfState.position.row, selfState.position.col - 1))
-      case MoveRight if selfState.position.row < 60 => selfState = selfState.copy(position = GridLocation(selfState.position.row, selfState.position.col + 1))
+      case MoveRight if selfState.position.row < worldSize.nCols => selfState = selfState.copy(position = GridLocation(selfState.position.row, selfState.position.col + 1))
       case Shoot(ref) => ref ! Attack
       case _ =>
     }

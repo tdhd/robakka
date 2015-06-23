@@ -63,7 +63,7 @@ class World(worldSize: Size) extends Actor with ActorLogging {
       val behaviour = io.github.tdhd.robakka.behaviours.SameRowBehaviour
       //      val behaviour = io.github.tdhd.robakka.behaviours.RandomBehaviour
 
-      context.actorOf(Agent.props(entity, behaviour))
+      context.actorOf(Agent.props(entity, behaviour, worldSize))
     }
   }
 
