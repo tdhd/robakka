@@ -91,12 +91,12 @@ class Agent(entity: AgentEntity, behaviour: BaseBehaviour, worldSize: Size) exte
 
   /**
    * main routine for agent
-   * 
+   *
    * the agent behaviour returns a list of commands the agents then follows
    */
   def action() = {
-//    regenHealth()
-//    spawnChild()
+    //    regenHealth()
+    //    spawnChild()
 
     val commands = behaviour.act(selfState, localWorldState)
 
@@ -114,17 +114,22 @@ class Agent(entity: AgentEntity, behaviour: BaseBehaviour, worldSize: Size) exte
     context.system.eventStream.publish(selfState)
   }
 
+  /**
+   * TODO:
+   * implement a chance to defend
+   * implement an amount of damage to be taken
+   * if defending -> more likely to not take damage
+   */
+  def defend() = {
+    selfState = selfState.copy(health = selfState.health - scala.util.Random.nextDouble)
+    if (selfState.health <= 0.0) {
+      die()
+    }
+  }
+
   def receive = {
     case AgentSelfAction => action()
     case ws: WorldState => worldState = ws
-    case Attack =>
-      // TODO:
-      // - implement a chance to defend
-      // - implement an amount of damage to be taken
-      // - if defending -> more likely to not take damage
-      selfState = selfState.copy(health = selfState.health - scala.util.Random.nextDouble)
-      if (selfState.health <= 0.0) {
-        die()
-      }
+    case Attack => defend()
   }
 }
