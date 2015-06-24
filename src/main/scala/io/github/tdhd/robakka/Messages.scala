@@ -14,7 +14,7 @@ case object GetUniqueAgentID
 case class UniqueAgentID(id: Long)
 // agent -> agent
 case object AgentSelfAction
-case class AgentDeath(agent: AgentEntity)
+case class RemoveAgent(agent: AgentEntity)
 // agent -> world
 case class RemovePlant(position: GridLocation)
 

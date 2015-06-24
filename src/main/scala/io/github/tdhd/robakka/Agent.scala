@@ -24,28 +24,20 @@ class Agent(entity: AgentEntity, behaviour: BaseBehaviour, worldSize: Size) exte
   // for ? pattern
   implicit val timeout = Timeout(1 seconds)
 
+  // schedule messages to self
+  val scheduler = context.system.scheduler.schedule(0 seconds, 1000 milliseconds, self, AgentSelfAction)
   // subscribe to changes of the world
   context.system.eventStream.subscribe(self, classOf[WorldState])
 
-  // TODO: aggressive, defensive
-  // val stance = false
   // update reference: if not copied, the ref of the world is kept
   var selfState = entity.copy(selfRef = self)
-
   var worldState = WorldState(entities = List.empty[GameEntity])
-
-  // schedule messages to self
-  val scheduler = context.system.scheduler.schedule(0 seconds, 1000 milliseconds, self, AgentSelfAction)
 
   override def postStop() = context.system.eventStream.unsubscribe(self)
 
-  def die() = {
-    scheduler.cancel
-    context.system.eventStream.publish(AgentDeath(selfState))
-    context.stop(self)
-  }
-
-  // takes this.worldState and filters it accordingly to the neighbourhood of the agent
+  /**
+   * returns the neighbourhood of the current position
+   */
   def localWorldState() = {
     WorldState {
       worldState.entities.filter {
@@ -72,16 +64,8 @@ class Agent(entity: AgentEntity, behaviour: BaseBehaviour, worldSize: Size) exte
     }
   }
 
-  def printAgentWorldState() = {
-    localWorldState.entities.foreach {
-      case PlantEntity(GridLocation(row, col)) => println(s"grass at ($row, $col")
-      case AgentEntity(GridLocation(row, col), _, _, _, _, _) => println(s"agent at ($row, $col)")
-      case _ =>
-    }
-  }
-
   /**
-   * clip maximum health
+   * update health and clip at max
    */
   def updateHealth(newHealth: Double) = {
     selfState = newHealth match {
@@ -89,6 +73,7 @@ class Agent(entity: AgentEntity, behaviour: BaseBehaviour, worldSize: Size) exte
       case h => selfState.copy(health = h)
     }
   }
+
   /**
    * regenerate health and clip and maximum health
    */
@@ -121,7 +106,8 @@ class Agent(entity: AgentEntity, behaviour: BaseBehaviour, worldSize: Size) exte
     }
 
   }
-  def act(c: CommandSet) = {
+
+  def action(c: CommandSet) = {
     val attackDamage = scala.util.Random.nextDouble
     c match {
       case CommandSet(_, Some(Shoot(ref))) => ref ! Attack(attackDamage)
@@ -132,21 +118,28 @@ class Agent(entity: AgentEntity, behaviour: BaseBehaviour, worldSize: Size) exte
   /**
    * main routine for agent
    *
-   * the agent behaviour returns a list of commands the agents then follows
+   * - regenerate health
+   * - spawn child
+   * - move
+   * - consume plant (gain health)
+   * - take action
    */
-  def action() = {
+  def act() = {
     //regenHealth()
     //spawnChild()
 
     val commandSet = behaviour.act(selfState, localWorldState)
     move(commandSet)
     consumePlant()
-    act(commandSet)
+    action(commandSet)
 
     // publish own state
     context.system.eventStream.publish(selfState)
   }
 
+  /**
+   * defend against incoming attack
+   */
   def defend(damage: Double) = {
     selfState = selfState.copy(health = selfState.health - damage)
     if (selfState.health <= 0.0) {
@@ -154,8 +147,14 @@ class Agent(entity: AgentEntity, behaviour: BaseBehaviour, worldSize: Size) exte
     }
   }
 
+  def die() = {
+    scheduler.cancel
+    context.system.eventStream.publish(RemoveAgent(selfState))
+    context.stop(self)
+  }
+
   def receive = {
-    case AgentSelfAction => action()
+    case AgentSelfAction => act()
     case ws: WorldState => worldState = ws
     case Attack(damage) => defend(damage)
   }

@@ -22,7 +22,7 @@ class World(teams: Iterable[GameTeam], worldSize: Size) extends Actor with Actor
   import context.dispatcher
 
   context.system.eventStream.subscribe(self, classOf[AgentEntity])
-  context.system.eventStream.subscribe(self, classOf[AgentDeath])
+  context.system.eventStream.subscribe(self, classOf[RemoveAgent])
 
   // announce the worlds state to everyone at a fixed interval
   val scheduler = context.system.scheduler.schedule(0 seconds, 1000 milliseconds, self, AnnounceWorldState)
@@ -50,8 +50,8 @@ class World(teams: Iterable[GameTeam], worldSize: Size) extends Actor with Actor
       j <- 1 to worldSize.nCols
     } {
       if (scala.util.Random.nextBoolean) {
-        val grassEntity = PlantEntity(position = GridLocation(row = i, col = j))
-        state = WorldState { state.entities :+ grassEntity }
+        val plantEntity = PlantEntity(position = GridLocation(row = i, col = j))
+        state = WorldState { state.entities :+ plantEntity }
       }
     }
 
@@ -71,10 +71,10 @@ class World(teams: Iterable[GameTeam], worldSize: Size) extends Actor with Actor
     }
   }
 
-  def removeAgent(agentId: Long) = {
+  def removeAgent(agent: AgentEntity) = {
     state = WorldState {
       state.entities.filterNot {
-        case AgentEntity(_, id, _, _, _, _) => id == agentId
+        case AgentEntity(_, id, _, _, _, _) => id == agent.agentId
         case _ => false
       }
     }
@@ -89,17 +89,17 @@ class World(teams: Iterable[GameTeam], worldSize: Size) extends Actor with Actor
     }
   }
 
-  def addAgentToWorld(entity: AgentEntity) = state = WorldState { state.entities :+ entity }
+  def addAgent(entity: AgentEntity) = {
+    removeAgent(entity)
+    state = WorldState { state.entities :+ entity }
+  }
 
   def receive = {
     case AnnounceWorldState => announceState
     case GetUniqueAgentID => sender ! UniqueAgentID(getUniqueAgentID)
 
     case RemovePlant(location) => removePlant(location)
-
-    case AgentDeath(agent) => removeAgent(agent.agentId)
-    case agentEntity: AgentEntity =>
-      removeAgent(agentEntity.agentId)
-      addAgentToWorld(agentEntity)
+    case RemoveAgent(agent) => removeAgent(agent)
+    case agentEntity: AgentEntity => addAgent(agentEntity)
   }
 }
