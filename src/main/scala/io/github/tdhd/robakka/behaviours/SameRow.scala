@@ -10,17 +10,18 @@ case object SameRowBehaviour extends BaseBehaviour {
       case _ => false
     }
 
+    val shootings: List[ActionCommand] = enemiesOnSameRow.map {
+      case AgentEntity(_, _, _, _, ref, _) => Shoot(ref)
+    }
+
+    // movement depends on whether on the same row there is a teammate
     val teamOnSameRow = !worldState.entities.filter {
       case AgentEntity(GridLocation(row, col), id, team, health, ref, world) =>
         id != entity.agentId && team == entity.team && row == entity.position.row
       case _ => false
     }.isEmpty
 
-    val shootings: List[AgentCommand] = enemiesOnSameRow.map {
-      case AgentEntity(_, _, _, _, ref, _) => Shoot(ref)
-    }
-
-    val res: AgentCommand = if (teamOnSameRow) {
+    val move: MoveCommand = if (teamOnSameRow) {
       if (scala.util.Random.nextBoolean) {
         MoveLeft
       } else {
@@ -34,7 +35,11 @@ case object SameRowBehaviour extends BaseBehaviour {
       }
     }
 
-    List(res) ++ shootings
+    if (shootings.isEmpty) {
+      CommandSet(move = Option(move))
+    } else {
+      CommandSet(move = Option(move), action = Option(shootings.head))
+    }
   }
 }
 

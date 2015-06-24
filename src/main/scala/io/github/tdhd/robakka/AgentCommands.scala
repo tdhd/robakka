@@ -13,3 +13,6 @@ case object MoveRight extends MoveCommand
 
 sealed trait ActionCommand extends AgentCommand
 case class Shoot(ref: ActorRef) extends ActionCommand
+
+// defines the set of command an agent can issue at one given point in time
+case class CommandSet(move: Option[MoveCommand] = Option.empty[MoveCommand], action: Option[ActionCommand] = Option.empty[ActionCommand])

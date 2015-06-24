@@ -10,8 +10,7 @@ val project = Project(
                libraryDependencies ++= Seq(
                  "com.typesafe.akka" %% "akka-actor" % "2.3.11",
                  "org.jfree" % "jfreechart" % "1.0.19",
-                 "com.github.scopt" %% "scopt" % "3.3.0"
-                 )
+                 "com.github.scopt" %% "scopt" % "3.3.0")
              )
 )
 

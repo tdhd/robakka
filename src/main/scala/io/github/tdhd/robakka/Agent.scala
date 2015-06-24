@@ -89,6 +89,26 @@ class Agent(entity: AgentEntity, behaviour: BaseBehaviour, worldSize: Size) exte
     }
   }
 
+  def move(c: CommandSet) = {
+    c match {
+      case CommandSet(Some(MoveUp), _) if selfState.position.row > 1 =>
+        selfState = selfState.copy(position = GridLocation(selfState.position.row - 1, selfState.position.col))
+      case CommandSet(Some(MoveDown), _) if selfState.position.row < worldSize.nRows =>
+        selfState = selfState.copy(position = GridLocation(selfState.position.row + 1, selfState.position.col))
+      case CommandSet(Some(MoveLeft), _) if selfState.position.col > 1 =>
+        selfState = selfState.copy(position = GridLocation(selfState.position.row, selfState.position.col - 1))
+      case CommandSet(Some(MoveRight), _) if selfState.position.row < worldSize.nCols =>
+        selfState = selfState.copy(position = GridLocation(selfState.position.row, selfState.position.col + 1))
+      case _ =>
+    }
+  }
+  def act(c: CommandSet) = {
+    c match {
+      case CommandSet(_, Some(Shoot(ref))) => ref ! Attack
+      case _ =>
+    }
+  }
+
   /**
    * main routine for agent
    *
@@ -98,17 +118,9 @@ class Agent(entity: AgentEntity, behaviour: BaseBehaviour, worldSize: Size) exte
     //    regenHealth()
     //    spawnChild()
 
-    val commands = behaviour.act(selfState, localWorldState)
-
-    // filter number of shoots down to 1
-    commands.foreach {
-      case MoveUp if selfState.position.row > 1 => selfState = selfState.copy(position = GridLocation(selfState.position.row - 1, selfState.position.col))
-      case MoveDown if selfState.position.row < worldSize.nRows => selfState = selfState.copy(position = GridLocation(selfState.position.row + 1, selfState.position.col))
-      case MoveLeft if selfState.position.col > 1 => selfState = selfState.copy(position = GridLocation(selfState.position.row, selfState.position.col - 1))
-      case MoveRight if selfState.position.row < worldSize.nCols => selfState = selfState.copy(position = GridLocation(selfState.position.row, selfState.position.col + 1))
-      case Shoot(ref) => ref ! Attack
-      case _ =>
-    }
+    val commandSet = behaviour.act(selfState, localWorldState)
+    move(commandSet)
+    act(commandSet)
 
     // publish own state
     context.system.eventStream.publish(selfState)
