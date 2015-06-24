@@ -74,18 +74,36 @@ class Agent(entity: AgentEntity, behaviour: BaseBehaviour, worldSize: Size) exte
 
   def printAgentWorldState() = {
     localWorldState.entities.foreach {
-      case GrassEntity(GridLocation(row, col)) => println(s"grass at ($row, $col")
+      case PlantEntity(GridLocation(row, col)) => println(s"grass at ($row, $col")
       case AgentEntity(GridLocation(row, col), _, _, _, _, _) => println(s"agent at ($row, $col)")
       case _ =>
+    }
+  }
+
+  /**
+   * clip maximum health
+   */
+  def updateHealth(newHealth: Double) = {
+    selfState = newHealth match {
+      case h if h > 1.0 => selfState.copy(health = 1.0)
+      case h => selfState.copy(health = h)
     }
   }
   /**
    * regenerate health and clip and maximum health
    */
-  def regenHealth() = {
-    selfState = selfState.health + scala.util.Random.nextDouble match {
-      case i if i > 1.0 => selfState.copy(health = 1.0)
-      case i => selfState.copy(health = i)
+  def regenHealth() = updateHealth(selfState.health + scala.util.Random.nextDouble)
+
+  def consumePlant() = {
+    // if standing on grass consume
+    worldState.entities.filter {
+      case PlantEntity(GridLocation(row, col)) => row == selfState.position.row && col == selfState.position.col
+      case _ => false
+    } match {
+      case l if !l.isEmpty =>
+        selfState.world ! RemovePlant(GridLocation(selfState.position.row, selfState.position.col))
+        updateHealth(selfState.health + 0.5)
+      case _ =>
     }
   }
 
@@ -101,6 +119,7 @@ class Agent(entity: AgentEntity, behaviour: BaseBehaviour, worldSize: Size) exte
         selfState = selfState.copy(position = GridLocation(selfState.position.row, selfState.position.col + 1))
       case _ =>
     }
+
   }
   def act(c: CommandSet) = {
     val attackDamage = scala.util.Random.nextDouble
@@ -116,23 +135,18 @@ class Agent(entity: AgentEntity, behaviour: BaseBehaviour, worldSize: Size) exte
    * the agent behaviour returns a list of commands the agents then follows
    */
   def action() = {
-    //    regenHealth()
-    //    spawnChild()
+    //regenHealth()
+    //spawnChild()
 
     val commandSet = behaviour.act(selfState, localWorldState)
     move(commandSet)
+    consumePlant()
     act(commandSet)
 
     // publish own state
     context.system.eventStream.publish(selfState)
   }
 
-  /**
-   * TODO:
-   * implement a chance to defend
-   * implement an amount of damage to be taken
-   * if defending -> more likely to not take damage
-   */
   def defend(damage: Double) = {
     selfState = selfState.copy(health = selfState.health - damage)
     if (selfState.health <= 0.0) {

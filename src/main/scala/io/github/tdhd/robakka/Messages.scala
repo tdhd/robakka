@@ -15,6 +15,8 @@ case class UniqueAgentID(id: Long)
 // agent -> agent
 case object AgentSelfAction
 case class AgentDeath(agent: AgentEntity)
+// agent -> world
+case class RemovePlant(position: GridLocation)
 
 // elements of the game
 sealed trait GameEntity {
@@ -26,5 +28,5 @@ case class AgentEntity(position: GridLocation,
   health: Double,
   selfRef: ActorRef,
   world: ActorRef) extends GameEntity
-case class GrassEntity(position: GridLocation) extends GameEntity
+case class PlantEntity(position: GridLocation) extends GameEntity
 case class WorldState(entities: List[GameEntity])

@@ -49,8 +49,10 @@ class World(teams: Iterable[GameTeam], worldSize: Size) extends Actor with Actor
       i <- 1 to worldSize.nRows
       j <- 1 to worldSize.nCols
     } {
-      val grassEntity = GrassEntity(position = GridLocation(row = i, col = j))
-      state = WorldState { state.entities :+ grassEntity }
+      if (scala.util.Random.nextBoolean) {
+        val grassEntity = PlantEntity(position = GridLocation(row = i, col = j))
+        state = WorldState { state.entities :+ grassEntity }
+      }
     }
 
     teams.foreach {
@@ -69,10 +71,19 @@ class World(teams: Iterable[GameTeam], worldSize: Size) extends Actor with Actor
     }
   }
 
-  def removeAgentFromWorld(agentId: Long) = {
+  def removeAgent(agentId: Long) = {
     state = WorldState {
       state.entities.filterNot {
         case AgentEntity(_, id, _, _, _, _) => id == agentId
+        case _ => false
+      }
+    }
+  }
+
+  def removePlant(location: GridLocation) = {
+    state = WorldState {
+      state.entities.filterNot {
+        case PlantEntity(GridLocation(row, col)) => location.row == row && location.col == col
         case _ => false
       }
     }
@@ -84,9 +95,11 @@ class World(teams: Iterable[GameTeam], worldSize: Size) extends Actor with Actor
     case AnnounceWorldState => announceState
     case GetUniqueAgentID => sender ! UniqueAgentID(getUniqueAgentID)
 
-    case AgentDeath(agent) => removeAgentFromWorld(agent.agentId)
+    case RemovePlant(location) => removePlant(location)
+
+    case AgentDeath(agent) => removeAgent(agent.agentId)
     case agentEntity: AgentEntity =>
-      removeAgentFromWorld(agentEntity.agentId)
+      removeAgent(agentEntity.agentId)
       addAgentToWorld(agentEntity)
   }
 }

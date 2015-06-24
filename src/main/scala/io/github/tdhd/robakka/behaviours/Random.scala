@@ -10,6 +10,16 @@ case object RandomBehaviour extends BaseBehaviour {
       case (true, false) => MoveLeft
       case (false, false) => MoveRight
     }
-    CommandSet(move = Option(move))
+
+    val enemies = worldState.entities.filter {
+      case AgentEntity(GridLocation(row, col), id, team, health, ref, world) => id != entity.agentId && team != entity.team
+      case _ => false
+    }.asInstanceOf[List[AgentEntity]]
+
+    if (enemies.isEmpty) {
+      CommandSet(move = Option(move))
+    } else {
+      CommandSet(move = Option(move), action = Option(Shoot(enemies.head.selfRef)))
+    }
   }
 }
