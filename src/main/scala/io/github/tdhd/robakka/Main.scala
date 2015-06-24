@@ -32,6 +32,7 @@ object Robakka {
         val teams = cmdLineConfig.agentBehaviours.map(_.toLowerCase).map {
           case "samerow" => io.github.tdhd.robakka.behaviours.SameRowBehaviour
           case "random" => io.github.tdhd.robakka.behaviours.RandomBehaviour
+          case "leftmoveshootright" => io.github.tdhd.robakka.behaviours.LeftMoveShootRightBehaviour
         }.zipWithIndex.map(x => GameTeam(x._2, x._1))
 
         val system = ActorSystem("system")

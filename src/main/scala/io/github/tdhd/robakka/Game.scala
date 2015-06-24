@@ -9,6 +9,7 @@ import akka.actor.Props
 import akka.actor.Terminated
 import akka.actor.Cancellable
 import akka.util.Timeout
+
 import io.github.tdhd.robakka.behaviours.BaseBehaviour
 import io.github.tdhd.robakka.visualization._
 

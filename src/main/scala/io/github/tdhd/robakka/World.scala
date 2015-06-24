@@ -55,9 +55,10 @@ class World(teams: Iterable[GameTeam], worldSize: Size) extends Actor with Actor
 
     teams.foreach {
       team =>
+        val teamStartLocation = GridLocation(scala.util.Random.nextInt(30), scala.util.Random.nextInt(60))
         for (i <- 1 to 25) {
           val entity = AgentEntity(
-            position = GridLocation(scala.util.Random.nextInt(30), scala.util.Random.nextInt(60)),
+            position = teamStartLocation,
             agentId = getUniqueAgentID,
             team = team.id,
             health = 1.0,
