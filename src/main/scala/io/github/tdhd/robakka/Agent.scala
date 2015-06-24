@@ -103,8 +103,9 @@ class Agent(entity: AgentEntity, behaviour: BaseBehaviour, worldSize: Size) exte
     }
   }
   def act(c: CommandSet) = {
+    val attackDamage = scala.util.Random.nextDouble
     c match {
-      case CommandSet(_, Some(Shoot(ref))) => ref ! Attack
+      case CommandSet(_, Some(Shoot(ref))) => ref ! Attack(attackDamage)
       case _ =>
     }
   }
@@ -132,8 +133,8 @@ class Agent(entity: AgentEntity, behaviour: BaseBehaviour, worldSize: Size) exte
    * implement an amount of damage to be taken
    * if defending -> more likely to not take damage
    */
-  def defend() = {
-    selfState = selfState.copy(health = selfState.health - scala.util.Random.nextDouble)
+  def defend(damage: Double) = {
+    selfState = selfState.copy(health = selfState.health - damage)
     if (selfState.health <= 0.0) {
       die()
     }
@@ -142,6 +143,6 @@ class Agent(entity: AgentEntity, behaviour: BaseBehaviour, worldSize: Size) exte
   def receive = {
     case AgentSelfAction => action()
     case ws: WorldState => worldState = ws
-    case Attack => defend()
+    case Attack(damage) => defend(damage)
   }
 }

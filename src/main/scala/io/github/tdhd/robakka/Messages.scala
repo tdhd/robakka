@@ -5,7 +5,7 @@ import akka.actor.ActorRef
 case class GridLocation(row: Int, col: Int)
 
 // agent -> agent
-case object Attack
+case class Attack(damage: Double)
 // world -> world
 case object AnnounceWorldState
 // agent -> world
