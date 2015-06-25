@@ -16,31 +16,31 @@ import io.github.tdhd.robakka._
 // http://stackoverflow.com/questions/19065053/animate-plot-on-jfreechart-line-graph
 
 object Visualizer {
-  def props(world: ActorRef, worldSize: Size): Props = Props(new Visualizer(world, worldSize))
+  def props(world: ActorRef, worldSize: World.Size): Props = Props(new Visualizer(world, worldSize))
 }
 
-class Visualizer(world: ActorRef, worldSize: Size) extends Actor with ActorLogging {
+class Visualizer(world: ActorRef, worldSize: World.Size) extends Actor with ActorLogging {
   import context.dispatcher
 
   // subscribe to events of the world
-  context.system.eventStream.subscribe(self, classOf[WorldState])
+  context.system.eventStream.subscribe(self, classOf[World.State])
 
   override def postStop() = context.system.eventStream.unsubscribe(self)
 
-  def plotVisualState(visualState: WorldState) = {
+  def plotVisualState(visualState: World.State) = {
     // TODO: no more than three teams
     val teamVisualizers = List("x", "y", "z")
     val uniqueTeams = visualState.entities.filter {
-      case agent: AgentEntity => true
+      case agent: World.AgentEntity => true
       case _ => false
-    }.map { _.asInstanceOf[AgentEntity].team }.distinct.zipWithIndex
+    }.map { _.asInstanceOf[World.AgentEntity].team }.distinct.zipWithIndex
     assert(uniqueTeams.size <= 3)
 
     // print team status
     uniqueTeams.foreach {
       case (teamId, index) =>
         val n = visualState.entities.filter {
-          case AgentEntity(GridLocation(row, col), id, team, health, ref, world) => team == teamId
+          case World.AgentEntity(World.Location(row, col), id, team, health, ref, world) => team == teamId
           case _ => false
         }.size
         println(s"${teamVisualizers(index)}: $n")
@@ -53,7 +53,7 @@ class Visualizer(world: ActorRef, worldSize: Size) extends Actor with ActorLoggi
     } {
 
       val agents = visualState.entities.filter {
-        case AgentEntity(GridLocation(row, col), id, team, health, ref, world) => row == i && col == j
+        case World.AgentEntity(World.Location(row, col), id, team, health, ref, world) => row == i && col == j
         case _ => false
       }
 
@@ -64,7 +64,7 @@ class Visualizer(world: ActorRef, worldSize: Size) extends Actor with ActorLoggi
           print(agents.size)
         } else {
           agents.foreach {
-            case AgentEntity(GridLocation(row, col), id, team, health, ref, world) =>
+            case World.AgentEntity(World.Location(row, col), id, team, health, ref, world) =>
               val teamColor = teamVisualizers {
                 uniqueTeams.filter {
                   case (teamId, index) => teamId == team
@@ -83,6 +83,6 @@ class Visualizer(world: ActorRef, worldSize: Size) extends Actor with ActorLoggi
   }
 
   def receive = {
-    case ws: WorldState => plotVisualState(ws)
+    case ws: World.State => plotVisualState(ws)
   }
 }

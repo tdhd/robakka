@@ -14,24 +14,54 @@ import akka.pattern.{ ask, pipe }
 import io.github.tdhd.robakka.behaviours._
 
 object Agent {
-  def props(entity: AgentEntity, behaviour: BaseBehaviour, worldSize: Size) = {
+  // agent -> agent
+  case object AgentSelfAction
+  // agent -> agent
+  case class Attack(damage: Double)
+
+//  object Commands {
+//    object Move {
+//      case object Left
+//    }
+//    object Action {
+//      case class Shoot(who: ActorRef)
+//    }
+//  }
+
+  sealed trait AgentCommand
+  sealed trait MoveCommand extends AgentCommand
+  case object MoveUp extends MoveCommand
+  case object MoveDown extends MoveCommand
+  case object MoveLeft extends MoveCommand
+  case object MoveRight extends MoveCommand
+  sealed trait ActionCommand extends AgentCommand
+  case class Shoot(who: ActorRef) extends ActionCommand
+  //sealed trait StanceCommand extends AgentCommand
+  //case object Defensive extends StanceCommand
+  //case object Aggressive extends StanceCommand
+  // defines the set of command an agent can issue at one given point in time
+  case class CommandSet(
+    move: Option[MoveCommand] = Option.empty[MoveCommand],
+    action: Option[ActionCommand] = Option.empty[ActionCommand])
+
+  def props(entity: World.AgentEntity, behaviour: BaseBehaviour, worldSize: World.Size) =
     Props(new Agent(entity, behaviour, worldSize))
-  }
+
 }
 
-class Agent(entity: AgentEntity, behaviour: BaseBehaviour, worldSize: Size) extends Actor with ActorLogging {
+class Agent(entity: World.AgentEntity, behaviour: BaseBehaviour, worldSize: World.Size) extends Actor with ActorLogging {
   import context.dispatcher
   // for ? pattern
   implicit val timeout = Timeout(1 seconds)
 
   // schedule messages to self
-  val scheduler = context.system.scheduler.schedule(0 seconds, 1000 milliseconds, self, AgentSelfAction)
+  val scheduler = context.system.scheduler.schedule(0 seconds, 1000 milliseconds, self, Agent.AgentSelfAction)
   // subscribe to changes of the world
-  context.system.eventStream.subscribe(self, classOf[WorldState])
+  context.system.eventStream.subscribe(self, classOf[World.State])
 
   // update reference: if not copied, the ref of the world is kept
   var selfState = entity.copy(selfRef = self)
-  var worldState = WorldState(entities = List.empty[GameEntity])
+  var worldState = World.State(entities = List.empty[World.GameEntity])
 
   override def postStop() = context.system.eventStream.unsubscribe(self)
 
@@ -39,9 +69,9 @@ class Agent(entity: AgentEntity, behaviour: BaseBehaviour, worldSize: Size) exte
    * returns the neighbourhood of the current position
    */
   def localWorldState() = {
-    WorldState {
+    World.State {
       worldState.entities.filter {
-        case entity: GameEntity =>
+        case entity: World.GameEntity =>
           scala.math.abs(entity.position.row - selfState.position.row) <= 1 && scala.math.abs(entity.position.col - selfState.position.col) <= 1
       }
     }
@@ -54,8 +84,8 @@ class Agent(entity: AgentEntity, behaviour: BaseBehaviour, worldSize: Size) exte
   def spawnChild(lowerHealthThreshold: Double = 0.75, healthReductionFactor: Double = 2.0) = {
     if (selfState.health > lowerHealthThreshold) {
       val newHealth = selfState.health / healthReductionFactor
-      (selfState.world ? GetUniqueAgentID).mapTo[UniqueAgentID].onSuccess {
-        case UniqueAgentID(spawnId) =>
+      (selfState.world ? World.GetUniqueAgentID).mapTo[World.UniqueAgentID].onSuccess {
+        case World.UniqueAgentID(spawnId) =>
           // create copy of self and spawn child, reduce own health
           val agentEntity = selfState.copy(agentId = spawnId, health = newHealth)
           context.actorOf(Agent.props(agentEntity, behaviour, worldSize))
@@ -82,35 +112,34 @@ class Agent(entity: AgentEntity, behaviour: BaseBehaviour, worldSize: Size) exte
   def consumePlant() = {
     // if standing on grass consume
     worldState.entities.filter {
-      case PlantEntity(GridLocation(row, col)) => row == selfState.position.row && col == selfState.position.col
+      case World.PlantEntity(World.Location(row, col)) => row == selfState.position.row && col == selfState.position.col
       case _ => false
     } match {
       case l if !l.isEmpty =>
-        selfState.world ! RemovePlant(GridLocation(selfState.position.row, selfState.position.col))
+        selfState.world ! World.RemovePlant(World.Location(selfState.position.row, selfState.position.col))
         updateHealth(selfState.health + 0.5)
       case _ =>
     }
   }
 
-  def move(c: CommandSet) = {
+  def move(c: Agent.CommandSet) = {
     c match {
-      case CommandSet(Some(MoveUp), _) if selfState.position.row > 1 =>
-        selfState = selfState.copy(position = GridLocation(selfState.position.row - 1, selfState.position.col))
-      case CommandSet(Some(MoveDown), _) if selfState.position.row < worldSize.nRows =>
-        selfState = selfState.copy(position = GridLocation(selfState.position.row + 1, selfState.position.col))
-      case CommandSet(Some(MoveLeft), _) if selfState.position.col > 1 =>
-        selfState = selfState.copy(position = GridLocation(selfState.position.row, selfState.position.col - 1))
-      case CommandSet(Some(MoveRight), _) if selfState.position.row < worldSize.nCols =>
-        selfState = selfState.copy(position = GridLocation(selfState.position.row, selfState.position.col + 1))
+      case Agent.CommandSet(Some(Agent.MoveUp), _) if selfState.position.row > 1 =>
+        selfState = selfState.copy(position = World.Location(selfState.position.row - 1, selfState.position.col))
+      case Agent.CommandSet(Some(Agent.MoveDown), _) if selfState.position.row < worldSize.nRows =>
+        selfState = selfState.copy(position = World.Location(selfState.position.row + 1, selfState.position.col))
+      case Agent.CommandSet(Some(Agent.MoveLeft), _) if selfState.position.col > 1 =>
+        selfState = selfState.copy(position = World.Location(selfState.position.row, selfState.position.col - 1))
+      case Agent.CommandSet(Some(Agent.MoveRight), _) if selfState.position.row < worldSize.nCols =>
+        selfState = selfState.copy(position = World.Location(selfState.position.row, selfState.position.col + 1))
       case _ =>
     }
-
   }
 
-  def action(c: CommandSet) = {
+  def action(c: Agent.CommandSet) = {
     val attackDamage = scala.util.Random.nextDouble
     c match {
-      case CommandSet(_, Some(Shoot(ref))) => ref ! Attack(attackDamage)
+      case Agent.CommandSet(_, Some(Agent.Shoot(ref))) => ref ! Agent.Attack(attackDamage)
       case _ =>
     }
   }
@@ -134,7 +163,7 @@ class Agent(entity: AgentEntity, behaviour: BaseBehaviour, worldSize: Size) exte
     action(commandSet)
 
     // publish own state
-    context.system.eventStream.publish(selfState)
+    context.system.eventStream.publish(World.UpdateAgent(selfState))
   }
 
   /**
@@ -149,13 +178,14 @@ class Agent(entity: AgentEntity, behaviour: BaseBehaviour, worldSize: Size) exte
 
   def die() = {
     scheduler.cancel
-    context.system.eventStream.publish(RemoveAgent(selfState))
+    context.system.eventStream.publish(World.RemoveAgent(selfState))
     context.stop(self)
   }
 
   def receive = {
-    case AgentSelfAction => act()
-    case ws: WorldState => worldState = ws
-    case Attack(damage) => defend(damage)
+    case Agent.AgentSelfAction => act()
+    case ws: World.State => worldState = ws
+    case Agent.Attack(damage) => defend(damage)
+    case _ =>
   }
 }

@@ -3,18 +3,18 @@ package io.github.tdhd.robakka.behaviours
 import io.github.tdhd.robakka._
 
 case object LeftMoveShootRightBehaviour extends BaseBehaviour {
-  def act(entity: AgentEntity, worldState: WorldState) = {
+  def act(entity: World.AgentEntity, worldState: World.State) = {
 
     val enemiesToRight = worldState.entities.filter {
-      case AgentEntity(GridLocation(row, col), id, team, health, ref, world) =>
+      case World.AgentEntity(World.Location(row, col), id, team, health, ref, world) =>
         id != entity.agentId && team != entity.team && row == entity.position.row && entity.position.col == col - 1
       case _ => false
-    }.asInstanceOf[List[AgentEntity]]
+    }.asInstanceOf[List[World.AgentEntity]]
 
     if (enemiesToRight.isEmpty) {
-      CommandSet(move = Option(MoveLeft))
+      Agent.CommandSet(move = Option(Agent.MoveLeft))
     } else {
-      CommandSet(move = Option(MoveLeft), action = Option(Shoot(enemiesToRight.head.selfRef)))
+      Agent.CommandSet(move = Option(Agent.MoveLeft), action = Option(Agent.Shoot(enemiesToRight.head.selfRef)))
     }
   }
 }

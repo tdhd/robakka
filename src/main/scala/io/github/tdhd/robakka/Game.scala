@@ -13,16 +13,16 @@ import akka.util.Timeout
 import io.github.tdhd.robakka.behaviours.BaseBehaviour
 import io.github.tdhd.robakka.visualization._
 
-case class GameTeam(id: Long, behaviour: BaseBehaviour)
-
 object Game {
-  def props(teams: Iterable[GameTeam]): Props = Props(new Game(teams))
+  case class Team(id: Long, behaviour: BaseBehaviour)
+
+  def props(teams: Iterable[Game.Team]) = Props(new Game(teams))
 }
 
-class Game(teams: Iterable[GameTeam]) extends Actor with ActorLogging {
+class Game(teams: Iterable[Game.Team]) extends Actor with ActorLogging {
   import context.dispatcher
 
-  val worldSize = Size(30, 60)
+  val worldSize = World.Size(30, 60)
   val world = context.watch(context.actorOf(World.props(teams, worldSize), "world"))
   val visualizer = context.watch(context.actorOf(Visualizer.props(world, worldSize ), "visualizer"))
 

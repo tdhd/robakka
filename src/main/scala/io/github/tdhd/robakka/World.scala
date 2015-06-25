@@ -12,22 +12,50 @@ import akka.pattern.{ ask, pipe }
 import akka.util.Timeout
 import scala.concurrent.Future
 
-case class Size(nRows: Int, nCols: Int)
-
 object World {
-  def props(teams: Iterable[GameTeam], worldSize: Size) = Props(new World(teams, worldSize))
+  // world -> world
+  case object AnnounceWorldState
+  // agent -> world
+  case object GetUniqueAgentID
+  // world -> agent
+  case class UniqueAgentID(id: Long)
+  // agent -> world
+  case class UpdateAgent(agent: AgentEntity)
+  // agent -> world
+  case class RemoveAgent(agent: AgentEntity)
+  // agent -> world
+  case class RemovePlant(position: Location)
+
+  // elements of the game
+  sealed trait GameEntity {
+    def position: Location
+  }
+  case class AgentEntity(position: Location,
+    agentId: Long,
+    team: Long,
+    health: Double,
+    selfRef: ActorRef,
+    world: ActorRef) extends GameEntity
+  case class PlantEntity(position: Location) extends GameEntity
+
+  case class Location(row: Int, col: Int)
+  case class State(entities: List[GameEntity])
+  case class Size(nRows: Int, nCols: Int)
+
+  def props(teams: Iterable[Game.Team], worldSize: Size) =
+    Props(new World(teams, worldSize))
 }
 
-class World(teams: Iterable[GameTeam], worldSize: Size) extends Actor with ActorLogging {
+class World(teams: Iterable[Game.Team], worldSize: World.Size) extends Actor with ActorLogging {
   import context.dispatcher
 
-  context.system.eventStream.subscribe(self, classOf[AgentEntity])
-  context.system.eventStream.subscribe(self, classOf[RemoveAgent])
+  context.system.eventStream.subscribe(self, classOf[World.UpdateAgent])
+  context.system.eventStream.subscribe(self, classOf[World.RemoveAgent])
 
   // announce the worlds state to everyone at a fixed interval
-  val scheduler = context.system.scheduler.schedule(0 seconds, 1000 milliseconds, self, AnnounceWorldState)
+  val scheduler = context.system.scheduler.schedule(0 seconds, 1000 milliseconds, self, World.AnnounceWorldState)
 
-  var state = WorldState(entities = List.empty[GameEntity])
+  var state = World.State(entities = List.empty[World.GameEntity])
   var agentIDCounter: Long = 0
 
   def getUniqueAgentID() = {
@@ -35,6 +63,8 @@ class World(teams: Iterable[GameTeam], worldSize: Size) extends Actor with Actor
     agentIDCounter
   }
 
+  // TODO: make this API configurable
+  // to also push to concurrent Enumerator
   def announceState() = context.system.eventStream.publish(state)
 
   override def postStop() = {
@@ -50,16 +80,16 @@ class World(teams: Iterable[GameTeam], worldSize: Size) extends Actor with Actor
       j <- 1 to worldSize.nCols
     } {
       if (scala.util.Random.nextBoolean) {
-        val plantEntity = PlantEntity(position = GridLocation(row = i, col = j))
-        state = WorldState { state.entities :+ plantEntity }
+        val plantEntity = World.PlantEntity(position = World.Location(row = i, col = j))
+        state = World.State { state.entities :+ plantEntity }
       }
     }
 
     teams.foreach {
       team =>
-        val teamStartLocation = GridLocation(scala.util.Random.nextInt(30), scala.util.Random.nextInt(60))
+        val teamStartLocation = World.Location(scala.util.Random.nextInt(30), scala.util.Random.nextInt(60))
         for (i <- 1 to 25) {
-          val entity = AgentEntity(
+          val entity = World.AgentEntity(
             position = teamStartLocation,
             agentId = getUniqueAgentID,
             team = team.id,
@@ -71,35 +101,34 @@ class World(teams: Iterable[GameTeam], worldSize: Size) extends Actor with Actor
     }
   }
 
-  def removeAgent(agent: AgentEntity) = {
-    state = WorldState {
+  def removeAgent(agent: World.AgentEntity) = {
+    state = World.State {
       state.entities.filterNot {
-        case AgentEntity(_, id, _, _, _, _) => id == agent.agentId
+        case World.AgentEntity(_, id, _, _, _, _) => id == agent.agentId
         case _ => false
       }
     }
   }
 
-  def removePlant(location: GridLocation) = {
-    state = WorldState {
+  def removePlant(location: World.Location) = {
+    state = World.State {
       state.entities.filterNot {
-        case PlantEntity(GridLocation(row, col)) => location.row == row && location.col == col
+        case World.PlantEntity(World.Location(row, col)) => location.row == row && location.col == col
         case _ => false
       }
     }
   }
 
-  def addAgent(entity: AgentEntity) = {
+  def updateAgent(entity: World.AgentEntity) = {
     removeAgent(entity)
-    state = WorldState { state.entities :+ entity }
+    state = World.State { state.entities :+ entity }
   }
 
   def receive = {
-    case AnnounceWorldState => announceState
-    case GetUniqueAgentID => sender ! UniqueAgentID(getUniqueAgentID)
-
-    case RemovePlant(location) => removePlant(location)
-    case RemoveAgent(agent) => removeAgent(agent)
-    case agentEntity: AgentEntity => addAgent(agentEntity)
+    case World.AnnounceWorldState => announceState
+    case World.GetUniqueAgentID => sender ! World.UniqueAgentID(getUniqueAgentID)
+    case World.RemovePlant(location) => removePlant(location)
+    case World.RemoveAgent(agent) => removeAgent(agent)
+    case World.UpdateAgent(agent) => updateAgent(agent)
   }
 }

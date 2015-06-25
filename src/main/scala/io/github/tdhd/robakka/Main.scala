@@ -33,7 +33,7 @@ object Robakka {
           case "samerow" => io.github.tdhd.robakka.behaviours.SameRowBehaviour
           case "random" => io.github.tdhd.robakka.behaviours.RandomBehaviour
           case "leftmoveshootright" => io.github.tdhd.robakka.behaviours.LeftMoveShootRightBehaviour
-        }.zipWithIndex.map(x => GameTeam(x._2, x._1))
+        }.zipWithIndex.map(x => Game.Team(x._2, x._1))
 
         val system = ActorSystem("system")
         val game = system.actorOf(Game.props(teams), "Game")
