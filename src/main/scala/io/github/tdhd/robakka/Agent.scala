@@ -124,11 +124,11 @@ class Agent(entity: World.AgentEntity, behaviour: BaseBehaviour, worldSize: Worl
 
   def move(c: Agent.CommandSet) = {
     c match {
-      case Agent.CommandSet(Some(Agent.MoveUp), _) if selfState.position.row > 1 =>
+      case Agent.CommandSet(Some(Agent.MoveUp), _) if selfState.position.row > 0 =>
         selfState = selfState.copy(position = World.Location(selfState.position.row - 1, selfState.position.col))
       case Agent.CommandSet(Some(Agent.MoveDown), _) if selfState.position.row < worldSize.nRows =>
         selfState = selfState.copy(position = World.Location(selfState.position.row + 1, selfState.position.col))
-      case Agent.CommandSet(Some(Agent.MoveLeft), _) if selfState.position.col > 1 =>
+      case Agent.CommandSet(Some(Agent.MoveLeft), _) if selfState.position.col > 0 =>
         selfState = selfState.copy(position = World.Location(selfState.position.row, selfState.position.col - 1))
       case Agent.CommandSet(Some(Agent.MoveRight), _) if selfState.position.row < worldSize.nCols =>
         selfState = selfState.copy(position = World.Location(selfState.position.row, selfState.position.col + 1))

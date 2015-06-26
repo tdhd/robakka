@@ -63,8 +63,6 @@ class World(teams: Iterable[Game.Team], worldSize: World.Size) extends Actor wit
     agentIDCounter
   }
 
-  // TODO: make this API configurable
-  // to also push to concurrent Enumerator
   def announceState() = context.system.eventStream.publish(state)
 
   override def postStop() = {
