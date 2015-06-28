@@ -55,7 +55,7 @@ class Agent(entity: World.AgentEntity, behaviour: BaseBehaviour, worldSize: Worl
   implicit val timeout = Timeout(1 seconds)
 
   // schedule messages to self
-  val scheduler = context.system.scheduler.schedule(0 seconds, 1000 milliseconds, self, Agent.AgentSelfAction)
+  val scheduler = context.system.scheduler.schedule(0 seconds, 200 milliseconds, self, Agent.AgentSelfAction)
   // subscribe to changes of the world
   context.system.eventStream.subscribe(self, classOf[World.State])
 

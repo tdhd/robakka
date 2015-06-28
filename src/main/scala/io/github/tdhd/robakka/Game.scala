@@ -22,6 +22,9 @@ object Game {
 }
 
 /**
+ * TODO:
+ * - set game update speed
+ *
  * creates a world with (0 to 30) rows and cols
  */
 class Game(teams: Iterable[Game.Team], worldSize: World.Size = World.Size(30, 30)) extends Actor with ActorLogging {

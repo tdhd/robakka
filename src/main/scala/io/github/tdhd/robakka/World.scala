@@ -53,7 +53,7 @@ class World(teams: Iterable[Game.Team], worldSize: World.Size) extends Actor wit
   context.system.eventStream.subscribe(self, classOf[World.RemoveAgent])
 
   // announce the worlds state to everyone at a fixed interval
-  val scheduler = context.system.scheduler.schedule(0 seconds, 1000 milliseconds, self, World.AnnounceWorldState)
+  val scheduler = context.system.scheduler.schedule(0 seconds, 200 milliseconds, self, World.AnnounceWorldState)
 
   var state = World.State(entities = List.empty[World.GameEntity])
   var agentIDCounter: Long = 0
