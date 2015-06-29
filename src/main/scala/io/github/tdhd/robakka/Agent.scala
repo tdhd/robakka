@@ -139,7 +139,7 @@ class Agent(entity: World.AgentEntity, behaviour: BaseBehaviour, worldSize: Worl
         selfState = selfState.copy(position = World.Location(selfState.position.row - 1, selfState.position.col))
       case Agent.CommandSet(Some(Agent.MoveLeft), _) if selfState.position.col > 0 =>
         selfState = selfState.copy(position = World.Location(selfState.position.row, selfState.position.col - 1))
-      case Agent.CommandSet(Some(Agent.MoveRight), _) if selfState.position.row < worldSize.nCols =>
+      case Agent.CommandSet(Some(Agent.MoveRight), _) if selfState.position.col < worldSize.nCols =>
         selfState = selfState.copy(position = World.Location(selfState.position.row, selfState.position.col + 1))
       case _ =>
     }
