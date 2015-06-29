@@ -10,7 +10,6 @@ import akka.actor.Terminated
 import akka.actor.Cancellable
 import akka.util.Timeout
 import akka.pattern.{ ask, pipe }
-
 import io.github.tdhd.robakka.behaviours._
 
 object Agent {
@@ -19,14 +18,14 @@ object Agent {
   // agent -> agent
   case class Attack(damage: Double)
 
-//  object Commands {
-//    object Move {
-//      case object Left
-//    }
-//    object Action {
-//      case class Shoot(who: ActorRef)
-//    }
-//  }
+  //  object Commands {
+  //    object Move {
+  //      case object Left
+  //    }
+  //    object Action {
+  //      case class Shoot(who: ActorRef)
+  //    }
+  //  }
 
   sealed trait AgentCommand
   sealed trait MoveCommand extends AgentCommand
@@ -46,9 +45,12 @@ object Agent {
 
   def props(entity: World.AgentEntity, behaviour: BaseBehaviour, worldSize: World.Size) =
     Props(new Agent(entity, behaviour, worldSize))
-
 }
 
+/**
+ * TODO:
+ * - all interactions with the world should happen with an explicit ask mapTo.onSuccess
+ */
 class Agent(entity: World.AgentEntity, behaviour: BaseBehaviour, worldSize: World.Size) extends Actor with ActorLogging {
   import context.dispatcher
   // for ? pattern
@@ -109,15 +111,19 @@ class Agent(entity: World.AgentEntity, behaviour: BaseBehaviour, worldSize: Worl
    */
   def regenHealth() = updateHealth(selfState.health + scala.util.Random.nextDouble)
 
+  /**
+   * consumes a plant if standing on it
+   */
   def consumePlant() = {
-    // if standing on grass consume
     worldState.entities.filter {
       case World.PlantEntity(World.Location(row, col)) => row == selfState.position.row && col == selfState.position.col
       case _ => false
     } match {
       case l if !l.isEmpty =>
-        selfState.world ! World.RemovePlant(World.Location(selfState.position.row, selfState.position.col))
-        updateHealth(selfState.health + 0.5)
+        val plant = l.head.asInstanceOf[World.PlantEntity]
+        (selfState.world ? World.ConsumePlant(plant, selfState)).mapTo[World.PlantConsumed].onSuccess {
+          case World.PlantConsumed(gain) => updateHealth(selfState.health + gain)
+        }
       case _ =>
     }
   }

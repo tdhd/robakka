@@ -24,7 +24,9 @@ object World {
   // agent -> world
   case class RemoveAgent(agent: AgentEntity)
   // agent -> world
-  case class RemovePlant(position: Location)
+  case class ConsumePlant(plant: PlantEntity, by: AgentEntity)
+  // world -> agent
+  case class PlantConsumed(health: Double)
 
   // elements of the game
   sealed trait GameEntity {
@@ -110,12 +112,20 @@ class World(teams: Iterable[Game.Team], worldSize: World.Size) extends Actor wit
     }
   }
 
-  def removePlant(location: World.Location) = {
+  def consumePlant(plant: World.PlantEntity) = {
+
+    val nEntitiesPre = state.entities.size
     state = World.State {
       state.entities.filterNot {
-        case World.PlantEntity(World.Location(row, col)) => location.row == row && location.col == col
+        case World.PlantEntity(World.Location(row, col)) => plant.position.row == row && plant.position.col == col
         case _ => false
       }
+    }
+    val nEntitiesPost = state.entities.size
+
+    // consume plant
+    if (nEntitiesPost < nEntitiesPre) {
+      sender ! World.PlantConsumed(0.5)
     }
   }
 
@@ -127,7 +137,7 @@ class World(teams: Iterable[Game.Team], worldSize: World.Size) extends Actor wit
   def receive = {
     case World.AnnounceWorldState => announceState
     case World.GetUniqueAgentID => sender ! World.UniqueAgentID(getUniqueAgentID)
-    case World.RemovePlant(location) => removePlant(location)
+    case World.ConsumePlant(plant, ref) => consumePlant(plant)
     case World.RemoveAgent(agent) => removeAgent(agent)
     case World.UpdateAgent(agent) => updateAgent(agent)
   }
