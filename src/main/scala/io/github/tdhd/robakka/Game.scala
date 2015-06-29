@@ -18,22 +18,23 @@ object Game {
 
   case class Team(id: Long, behaviour: BaseBehaviour)
 
-  def props(teams: Iterable[Game.Team], worldSize: World.Size = World.Size(30, 30)) = Props(new Game(teams, worldSize))
+  def props(teams: Iterable[Game.Team],
+    worldSize: World.Size = World.Size(30, 30),
+    gameUpdateInterval: FiniteDuration = 250 milliseconds) = Props(new Game(teams, worldSize, gameUpdateInterval))
 }
 
 /**
- * TODO:
- * - set game update speed (a: FiniteDuration = 500 milliseconds)
- * - add API to allow learning of beahaviours
- * - make behaviours composable
+ * the main game object containing the world
  *
- * creates a world with (0 to 30) rows and cols
+ * TODO:
+ * - add API to allow learning of behaviours
+ *
  */
-class Game(teams: Iterable[Game.Team], worldSize: World.Size) extends Actor with ActorLogging {
+class Game(teams: Iterable[Game.Team], worldSize: World.Size, gameUpdateInterval: FiniteDuration) extends Actor with ActorLogging {
   import context.dispatcher
 
   // create the game world
-  val world = context.watch(context.actorOf(World.props(teams, worldSize), "world"))
+  val world = context.watch(context.actorOf(World.props(teams, worldSize, gameUpdateInterval), "world"))
   // a list of subscribers which wish to be notified about the game
   var gameSubscribers = List.empty[ActorRef]
   // subscribe to world states

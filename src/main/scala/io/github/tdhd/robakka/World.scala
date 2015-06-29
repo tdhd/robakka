@@ -44,18 +44,20 @@ object World {
   case class State(entities: List[GameEntity])
   case class Size(nRows: Int, nCols: Int)
 
-  def props(teams: Iterable[Game.Team], worldSize: Size) =
-    Props(new World(teams, worldSize))
+  def props(teams: Iterable[Game.Team],
+    worldSize: Size,
+    gameUpdateInterval: FiniteDuration) =
+    Props(new World(teams, worldSize, gameUpdateInterval))
 }
 
-class World(teams: Iterable[Game.Team], worldSize: World.Size) extends Actor with ActorLogging {
+class World(teams: Iterable[Game.Team], worldSize: World.Size, gameUpdateInterval: FiniteDuration) extends Actor with ActorLogging {
   import context.dispatcher
 
   context.system.eventStream.subscribe(self, classOf[World.UpdateAgent])
   context.system.eventStream.subscribe(self, classOf[World.RemoveAgent])
 
   // announce the worlds state to everyone at a fixed interval
-  val scheduler = context.system.scheduler.schedule(0 seconds, 200 milliseconds, self, World.AnnounceWorldState)
+  val scheduler = context.system.scheduler.schedule(0 seconds, gameUpdateInterval, self, World.AnnounceWorldState)
 
   var state = World.State(entities = List.empty[World.GameEntity])
   var agentIDCounter: Long = 0
@@ -98,7 +100,7 @@ class World(teams: Iterable[Game.Team], worldSize: World.Size) extends Actor wit
             health = 1.0,
             selfRef = self,
             world = self)
-          context.actorOf(Agent.props(entity, team.behaviour, worldSize))
+          context.actorOf(Agent.props(entity, team.behaviour, worldSize, gameUpdateInterval))
         }
     }
   }

@@ -43,21 +43,23 @@ object Agent {
     move: Option[MoveCommand] = Option.empty[MoveCommand],
     action: Option[ActionCommand] = Option.empty[ActionCommand])
 
-  def props(entity: World.AgentEntity, behaviour: BaseBehaviour, worldSize: World.Size) =
-    Props(new Agent(entity, behaviour, worldSize))
+  def props(entity: World.AgentEntity,
+    behaviour: BaseBehaviour,
+    worldSize: World.Size,
+    gameUpdateInterval: FiniteDuration) =
+    Props(new Agent(entity, behaviour, worldSize, gameUpdateInterval))
 }
 
 /**
- * TODO:
- * - all interactions with the world should happen with an explicit ask mapTo.onSuccess
+ * the main agent class
  */
-class Agent(entity: World.AgentEntity, behaviour: BaseBehaviour, worldSize: World.Size) extends Actor with ActorLogging {
+class Agent(entity: World.AgentEntity, behaviour: BaseBehaviour, worldSize: World.Size, gameUpdateInterval: FiniteDuration) extends Actor with ActorLogging {
   import context.dispatcher
   // for ? pattern
   implicit val timeout = Timeout(1 seconds)
 
   // schedule messages to self
-  val scheduler = context.system.scheduler.schedule(0 seconds, 200 milliseconds, self, Agent.AgentSelfAction)
+  val scheduler = context.system.scheduler.schedule(0 seconds, gameUpdateInterval, self, Agent.AgentSelfAction)
   // subscribe to changes of the world
   context.system.eventStream.subscribe(self, classOf[World.State])
 
@@ -90,7 +92,7 @@ class Agent(entity: World.AgentEntity, behaviour: BaseBehaviour, worldSize: Worl
         case World.UniqueAgentID(spawnId) =>
           // create copy of self and spawn child, reduce own health
           val agentEntity = selfState.copy(agentId = spawnId, health = newHealth)
-          context.actorOf(Agent.props(agentEntity, behaviour, worldSize))
+          context.actorOf(Agent.props(agentEntity, behaviour, worldSize, gameUpdateInterval))
           selfState = selfState.copy(health = newHealth)
       }
     }
