@@ -89,8 +89,8 @@ class World(teams: Iterable[Game.Team], worldSize: World.Size, gameUpdateInterva
 
     teams.foreach {
       team =>
-        val startRow = scala.util.Random.shuffle(0 to worldSize.nRows).head
-        val startCol = scala.util.Random.shuffle(0 to worldSize.nCols).head
+        val startRow = scala.util.Random.shuffle(0 to worldSize.nRows - 1).head
+        val startCol = scala.util.Random.shuffle(0 to worldSize.nCols - 1).head
         val teamStartLocation = World.Location(startRow, startCol)
         for (i <- 1 to 25) {
           val entity = World.AgentEntity(
