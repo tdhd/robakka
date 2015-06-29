@@ -23,11 +23,13 @@ object Game {
 
 /**
  * TODO:
- * - set game update speed
+ * - set game update speed (a: FiniteDuration = 500 milliseconds)
+ * - add API to allow learning of beahaviours
+ * - make behaviours composable
  *
  * creates a world with (0 to 30) rows and cols
  */
-class Game(teams: Iterable[Game.Team], worldSize: World.Size = World.Size(30, 30)) extends Actor with ActorLogging {
+class Game(teams: Iterable[Game.Team], worldSize: World.Size) extends Actor with ActorLogging {
   import context.dispatcher
 
   // create the game world
