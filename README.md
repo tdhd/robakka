@@ -4,9 +4,37 @@ robakka is a programming game in scala. It is based on akka (http://akka.io) to 
 
 This game is inspired by RobotWar (https://en.wikipedia.org/wiki/RobotWar) and cells (https://github.com/phreeza/cells).
 
+### Behaviours in robakka
+
+The main challenge of the game is to implement behaviours which can beat others. I provide some pretty simple behaviours and will continue to add more as development progresses.
+
+For example check out `FollowPlantBehaviour` which will cause all agents with the installed behaviour to consume a plant if one is in their neighbourhood. If there is no plant, the behaviour causes the agent to randomly search for another plant. All agents with this behaviour are pacifists, they only eat plants and never shoot anyone! The implementation of it is quite simple:
+
+```{scala}
+package io.github.tdhd.robakka.behaviours
+
+import io.github.tdhd.robakka._
+import io.github.tdhd.robakka.Agent.MoveCommand
+
+case object FollowPlantBehaviour extends BaseBehaviour {
+  def act(entity: World.AgentEntity, worldState: World.State) = {
+
+    val plants = BehaviourHelpers.entities2MoveCommand[World.PlantEntity](entity, worldState)
+
+    val move: Option[Agent.MoveCommand] = if (plants.isEmpty) {
+      Option(BehaviourHelpers.getRandomMove)
+    } else {
+      Option(plants.head._2)
+    }
+
+    Agent.CommandSet(move = move)
+  }
+}
+```
+
 ### About robakka
 
-robakka is in early development and is not useable at the moment.
+robakka is in early development and barely useable at the moment.
 
 ### Why the name robakka?
 
