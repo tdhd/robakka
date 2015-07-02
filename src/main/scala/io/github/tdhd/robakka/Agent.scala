@@ -29,10 +29,15 @@ object Agent {
 
   sealed trait AgentCommand
   sealed trait MoveCommand extends AgentCommand
+  case object MoveUpLeft extends MoveCommand
   case object MoveUp extends MoveCommand
-  case object MoveDown extends MoveCommand
+  case object MoveUpRight extends MoveCommand
   case object MoveLeft extends MoveCommand
   case object MoveRight extends MoveCommand
+  case object MoveDownLeft extends MoveCommand
+  case object MoveDown extends MoveCommand
+  case object MoveDownRight extends MoveCommand
+
   sealed trait ActionCommand extends AgentCommand
   case class Shoot(who: ActorRef) extends ActionCommand
   //sealed trait StanceCommand extends AgentCommand
@@ -133,14 +138,24 @@ class Agent(entity: World.AgentEntity, behaviour: BaseBehaviour, worldSize: Worl
   def move(c: Agent.CommandSet) = {
     c match {
       // lower left is 0, 0
+      case Agent.CommandSet(Some(Agent.MoveUpLeft), _) if selfState.position.row < worldSize.nRows && selfState.position.col > 0 =>
+        selfState = selfState.copy(position = World.Location(selfState.position.row + 1, selfState.position.col - 1))
       case Agent.CommandSet(Some(Agent.MoveUp), _) if selfState.position.row < worldSize.nRows =>
         selfState = selfState.copy(position = World.Location(selfState.position.row + 1, selfState.position.col))
-      case Agent.CommandSet(Some(Agent.MoveDown), _) if selfState.position.row > 0 =>
-        selfState = selfState.copy(position = World.Location(selfState.position.row - 1, selfState.position.col))
+      case Agent.CommandSet(Some(Agent.MoveUpRight), _) if selfState.position.row < worldSize.nRows && selfState.position.col < worldSize.nCols =>
+        selfState = selfState.copy(position = World.Location(selfState.position.row + 1, selfState.position.col + 1))
+
       case Agent.CommandSet(Some(Agent.MoveLeft), _) if selfState.position.col > 0 =>
         selfState = selfState.copy(position = World.Location(selfState.position.row, selfState.position.col - 1))
       case Agent.CommandSet(Some(Agent.MoveRight), _) if selfState.position.col < worldSize.nCols =>
         selfState = selfState.copy(position = World.Location(selfState.position.row, selfState.position.col + 1))
+
+      case Agent.CommandSet(Some(Agent.MoveDownLeft), _) if selfState.position.row > 0 && selfState.position.col > 0 =>
+        selfState = selfState.copy(position = World.Location(selfState.position.row - 1, selfState.position.col - 1))
+      case Agent.CommandSet(Some(Agent.MoveDown), _) if selfState.position.row > 0 =>
+        selfState = selfState.copy(position = World.Location(selfState.position.row - 1, selfState.position.col))
+      case Agent.CommandSet(Some(Agent.MoveDownRight), _) if selfState.position.row > 0 && selfState.position.col < worldSize.nCols =>
+        selfState = selfState.copy(position = World.Location(selfState.position.row - 1, selfState.position.col + 1))
       case _ =>
     }
   }
