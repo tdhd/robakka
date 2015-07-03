@@ -122,42 +122,23 @@ class Agent(entity: World.AgentEntity, behaviour: BaseBehaviour, worldSize: Worl
    * consumes a plant if standing on it
    */
   def consumePlant() = {
-    worldState.entities.filter {
+    val somePlant = BehaviourHelpers.getFromList[World.PlantEntity](worldState.entities).filter {
       case World.PlantEntity(World.Location(row, col)) => row == selfState.position.row && col == selfState.position.col
       case _ => false
-    } match {
-      case l if !l.isEmpty =>
-        val plant = l.head.asInstanceOf[World.PlantEntity]
-        (selfState.world ? World.ConsumePlant(plant, selfState)).mapTo[World.PlantConsumed].onSuccess {
+    }.headOption
+
+    somePlant.foreach {
+      p =>
+        (selfState.world ? World.ConsumePlant(p, selfState)).mapTo[World.PlantConsumed].onSuccess {
           case World.PlantConsumed(gain) => updateHealth(selfState.health + gain)
         }
-      case _ =>
     }
   }
 
   def move(c: Agent.CommandSet) = {
-    c match {
-      // lower left is 0, 0
-      case Agent.CommandSet(Some(Agent.MoveUpLeft), _) if selfState.position.row < worldSize.nRows && selfState.position.col > 0 =>
-        selfState = selfState.copy(position = World.Location(selfState.position.row + 1, selfState.position.col - 1))
-      case Agent.CommandSet(Some(Agent.MoveUp), _) if selfState.position.row < worldSize.nRows =>
-        selfState = selfState.copy(position = World.Location(selfState.position.row + 1, selfState.position.col))
-      case Agent.CommandSet(Some(Agent.MoveUpRight), _) if selfState.position.row < worldSize.nRows && selfState.position.col < worldSize.nCols =>
-        selfState = selfState.copy(position = World.Location(selfState.position.row + 1, selfState.position.col + 1))
-
-      case Agent.CommandSet(Some(Agent.MoveLeft), _) if selfState.position.col > 0 =>
-        selfState = selfState.copy(position = World.Location(selfState.position.row, selfState.position.col - 1))
-      case Agent.CommandSet(Some(Agent.MoveRight), _) if selfState.position.col < worldSize.nCols =>
-        selfState = selfState.copy(position = World.Location(selfState.position.row, selfState.position.col + 1))
-
-      case Agent.CommandSet(Some(Agent.MoveDownLeft), _) if selfState.position.row > 0 && selfState.position.col > 0 =>
-        selfState = selfState.copy(position = World.Location(selfState.position.row - 1, selfState.position.col - 1))
-      case Agent.CommandSet(Some(Agent.MoveDown), _) if selfState.position.row > 0 =>
-        selfState = selfState.copy(position = World.Location(selfState.position.row - 1, selfState.position.col))
-      case Agent.CommandSet(Some(Agent.MoveDownRight), _) if selfState.position.row > 0 && selfState.position.col < worldSize.nCols =>
-        selfState = selfState.copy(position = World.Location(selfState.position.row - 1, selfState.position.col + 1))
-      case _ =>
-    }
+    // either translate or return current position in case the move option was not defined
+    val updatedPosition = c.move.map(selfState.position.translate(_, worldSize)).getOrElse(selfState.position)
+    selfState = selfState.copy(position = updatedPosition)
   }
 
   def action(c: Agent.CommandSet) = {

@@ -40,7 +40,30 @@ object World {
     world: ActorRef) extends GameEntity
   case class PlantEntity(position: Location) extends GameEntity
 
-  case class Location(row: Int, col: Int)
+  case class Location(row: Int, col: Int) {
+    def translate(move: Agent.MoveCommand, ws: World.Size) = {
+      val updated = move match {
+        case Agent.MoveUpLeft => this.copy(row = row + 1, col = col - 1)
+        case Agent.MoveUp => this.copy(row = row + 1)
+        case Agent.MoveUpRight => this.copy(row = row + 1, col = col + 1)
+
+        case Agent.MoveLeft => this.copy(col = col - 1)
+        case Agent.MoveRight => this.copy(col = col + 1)
+
+        case Agent.MoveDownLeft => this.copy(row = row - 1, col = col - 1)
+        case Agent.MoveDown => this.copy(row = row - 1)
+        case Agent.MoveDownRight => this.copy(row = row - 1, col = col + 1)
+
+        case _ => this.copy()
+      }
+      if(updated.row >= 0 && updated.row <= ws.nRows && updated.col >= 0 && updated.col <= ws.nCols) {
+        updated
+      } else {
+        this
+      }
+    }
+  }
+
   case class State(entities: List[GameEntity])
   case class Size(nRows: Int, nCols: Int)
 

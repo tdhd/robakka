@@ -6,6 +6,9 @@ import scala.reflect.{ ClassTag, classTag }
 
 object BehaviourHelpers {
 
+  // TODO
+  //case class EntityMove(entity: World.GameEntity, move: Agent.MoveCommand)
+
   def getRandomMove() = {
     scala.util.Random.shuffle(List(Agent.MoveUpLeft,
       Agent.MoveUp,
@@ -27,6 +30,12 @@ object BehaviourHelpers {
   //      case a => true
   //    }
   //  }
+
+  /**
+   * receives a list of entities and returns a list of tuples:
+   * (T, Agent.MoveCommand)
+   * for every T, the move command is the command required to move to that entity from the current position
+   */
   def entities2MoveCommand[T: ClassTag](self: World.AgentEntity, ws: World.State) = getFromList[T](ws.entities).map {
     case entity: World.GameEntity =>
       (entity.position.row - self.position.row, entity.position.col - self.position.col) match {
@@ -73,19 +82,4 @@ object BehaviourHelpers {
   //    case entity: T => entity
   //  }
   //  val a = mapEntitiesToPosition(getTypesFromList[B](List(new B, new C, new B)))
-
-  def getEnemies(agent: World.AgentEntity, worldState: World.State) = {
-    worldState.entities.filter {
-      case World.AgentEntity(World.Location(row, col), id, team, health, ref, world) =>
-        id != agent.agentId && team != agent.team
-      case _ => false
-    }
-  }.asInstanceOf[List[World.AgentEntity]]
-
-  def getPlants(worldState: World.State) = {
-    worldState.entities.filter {
-      case World.PlantEntity(World.Location(row, col)) => true
-      case _ => false
-    }
-  }.asInstanceOf[List[World.PlantEntity]]
 }

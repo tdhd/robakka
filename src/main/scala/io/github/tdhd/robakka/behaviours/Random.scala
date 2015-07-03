@@ -4,19 +4,16 @@ import io.github.tdhd.robakka._
 
 case object RandomBehaviour extends BaseBehaviour {
   def act(entity: World.AgentEntity, worldState: World.State) = {
-    val move = (scala.util.Random.nextBoolean, scala.util.Random.nextBoolean) match {
-      case (true, true) => Agent.MoveUp
-      case (false, true) => Agent.MoveDown
-      case (true, false) => Agent.MoveLeft
-      case (false, false) => Agent.MoveRight
-    }
 
-    val enemies = BehaviourHelpers.getEnemies(entity, worldState)
-
-    if (enemies.isEmpty) {
-      Agent.CommandSet(move = Option(move))
-    } else {
-      Agent.CommandSet(move = Option(move), action = Option(Agent.Shoot(enemies.head.selfRef)))
+    val move = BehaviourHelpers.getRandomMove
+    val agents = BehaviourHelpers.entities2MoveCommand[World.AgentEntity](entity, worldState)
+    val enemies = agents.filter {
+      case (World.AgentEntity(_, agentId, team, health, _, _), _) => team != entity.team
     }
+    val shooting = enemies.map {
+      case (World.AgentEntity(_, _, _, _, ref, _), _) => Agent.Shoot(ref)
+    }.headOption
+
+    Agent.CommandSet(move = Option(move), action = shooting)
   }
 }

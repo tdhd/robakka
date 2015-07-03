@@ -12,23 +12,15 @@ case object FollowEnemyBehaviour extends BaseBehaviour {
       case (World.AgentEntity(_, agentId, team, health, _, _), _) => team != entity.team
     }
 
-    val shootings: List[Option[Agent.ActionCommand]] = enemies.take(1).map {
-      case (World.AgentEntity(_, _, _, _, ref, _), _) => Option(Agent.Shoot(ref))
-    }
+    val shooting = enemies.map {
+      case (World.AgentEntity(_, _, _, _, ref, _), _) => Agent.Shoot(ref)
+    }.headOption
 
-    //    shootings.filter(_.isEmpty)
+    val move = enemies.headOption.map {
+      case (enemy, moveCommand) => moveCommand
+    }.getOrElse(BehaviourHelpers.getRandomMove)
 
-    val move: Option[Agent.MoveCommand] = if (enemies.isEmpty) {
-      Option(BehaviourHelpers.getRandomMove)
-    } else {
-      Option(enemies.head._2)
-    }
-
-    if (shootings.isEmpty) {
-      Agent.CommandSet(move = move)
-    } else {
-      Agent.CommandSet(move = move, action = shootings.head)
-    }
+    Agent.CommandSet(move = Option(move), action = shooting)
   }
 }
 
