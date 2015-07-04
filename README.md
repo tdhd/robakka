@@ -21,15 +21,14 @@ case object FollowPlantBehaviour extends BaseBehaviour {
 
     val plants = BehaviourHelpers.entities2MoveCommand[World.PlantEntity](entity, worldState)
 
-    val move: Option[Agent.MoveCommand] = if (plants.isEmpty) {
-      Option(BehaviourHelpers.getRandomMove)
-    } else {
-      Option(plants.head._2)
-    }
+    val move = plants.headOption.map {
+      case (plant, moveCommand) => moveCommand
+    }.getOrElse(BehaviourHelpers.getRandomMove)
 
-    Agent.CommandSet(move = move)
+    Agent.CommandSet(move = Option(move))
   }
 }
+
 ```
 
 ### About robakka
