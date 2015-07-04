@@ -93,8 +93,8 @@ class Agent(entity: World.AgentEntity, behaviour: BaseBehaviour, worldSize: Worl
   def spawnChild(lowerHealthThreshold: Double = 0.75, healthReductionFactor: Double = 2.0) = {
     if (selfState.health > lowerHealthThreshold) {
       val newHealth = selfState.health / healthReductionFactor
-      (selfState.world ? World.GetUniqueAgentID).mapTo[World.UniqueAgentID].onSuccess {
-        case World.UniqueAgentID(spawnId) =>
+      (selfState.world ? World.GetUniqueID).mapTo[World.UniqueID].onSuccess {
+        case World.UniqueID(spawnId) =>
           // create copy of self and spawn child, reduce own health
           val agentEntity = selfState.copy(id = spawnId, health = newHealth)
           context.actorOf(Agent.props(agentEntity, behaviour, worldSize, gameUpdateInterval))

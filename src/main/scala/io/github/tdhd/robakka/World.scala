@@ -17,9 +17,9 @@ object World {
   // world -> world
   case object AnnounceWorldState
   // agent -> world
-  case object GetUniqueAgentID
+  case object GetUniqueID
   // world -> agent
-  case class UniqueAgentID(id: Long)
+  case class UniqueID(id: Long)
   // entity -> world
   case class RemoveEntity(entity: GameEntity)
   // entity -> world
@@ -152,7 +152,7 @@ class World(teams: Iterable[Game.Team], worldSize: World.Size, gameUpdateInterva
 
   def receive = {
     case World.AnnounceWorldState => announceState
-    case World.GetUniqueAgentID => sender ! World.UniqueAgentID(getUniqueID)
+    case World.GetUniqueID => sender ! World.UniqueID(getUniqueID)
     case World.RemoveEntity(entity) => remove[entity.type](entity)
     case World.UpdateEntity(entity) => update(entity)
   }
