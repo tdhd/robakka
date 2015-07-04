@@ -8,7 +8,7 @@ This game is inspired by RobotWar (https://en.wikipedia.org/wiki/RobotWar) and c
 
 The main challenge of the game is to implement behaviours which can beat others. I provide some pretty simple behaviours and will continue to add more as development progresses.
 
-For example check out `FollowPlantBehaviour` which will cause all agents with the installed behaviour to consume a plant if one is in their neighbourhood. If there is no plant, the behaviour causes the agent to randomly search for another plant. All agents with this behaviour are pacifists, they only eat plants and never shoot anyone! The implementation of it is quite simple:
+For example check out `FollowPlantBehaviour` which will cause all agents with the installed behaviour to move to the field of a plant if there is one in their neighbourhood. If there is no plant, the behaviour causes the agent to randomly search for another plant. All agents with this behaviour are pacifists, they only eat plants and never shoot anyone! The implementation of it is quite simple:
 
 ```{scala}
 package io.github.tdhd.robakka.behaviours
