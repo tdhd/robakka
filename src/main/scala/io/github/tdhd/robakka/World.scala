@@ -11,6 +11,7 @@ import akka.actor.Cancellable
 import akka.pattern.{ ask, pipe }
 import akka.util.Timeout
 import scala.concurrent.Future
+import scala.reflect.{ ClassTag, classTag }
 
 object World {
   // world -> world
@@ -19,14 +20,11 @@ object World {
   case object GetUniqueAgentID
   // world -> agent
   case class UniqueAgentID(id: Long)
-  // agent -> world
-  case class UpdateAgent(agent: AgentEntity)
-  // agent -> world
-  case class RemoveAgent(agent: AgentEntity)
-  // plant -> world
-  case class UpdatePlant(plant: PlantEntity)
-  // plant -> world
-  case class RemovePlant(plant: PlantEntity)
+  // entity -> world
+  case class RemoveEntity(entity: GameEntity)
+  // entity -> world
+  case class UpdateEntity(entity: GameEntity)
+
   // agent -> plant
   case class ConsumePlant(plant: PlantEntity, by: AgentEntity)
   // plant -> agent
@@ -84,10 +82,8 @@ object World {
 class World(teams: Iterable[Game.Team], worldSize: World.Size, gameUpdateInterval: FiniteDuration) extends Actor with ActorLogging {
   import context.dispatcher
 
-  context.system.eventStream.subscribe(self, classOf[World.UpdateAgent])
-  context.system.eventStream.subscribe(self, classOf[World.RemoveAgent])
-  context.system.eventStream.subscribe(self, classOf[World.UpdatePlant])
-  context.system.eventStream.subscribe(self, classOf[World.RemovePlant])
+  context.system.eventStream.subscribe(self, classOf[World.UpdateEntity])
+  context.system.eventStream.subscribe(self, classOf[World.RemoveEntity])
 
   // announce the worlds state to everyone at a fixed interval
   val scheduler = context.system.scheduler.schedule(0 seconds, gameUpdateInterval, self, World.AnnounceWorldState)
@@ -138,38 +134,26 @@ class World(teams: Iterable[Game.Team], worldSize: World.Size, gameUpdateInterva
     }
   }
 
-  def removeAgent(agent: World.AgentEntity) = {
+  /** generic method to remove an entity from the world **/
+  def remove[T: ClassTag](entity: World.GameEntity) = {
     state = World.State {
       state.entities.filterNot {
-        case World.AgentEntity(_, id, _, _, _, _) => id == agent.id
+        case item: T => item.id == entity.id
         case _ => false
       }
     }
   }
 
-  def updateAgent(entity: World.AgentEntity) = {
-    removeAgent(entity)
+  /** generic update method to update an entity in the world **/
+  def update(entity: World.GameEntity) = {
+    remove[entity.type](entity)
     state = World.State { state.entities :+ entity }
   }
 
-  def removePlant(plant: World.PlantEntity) = {
-    state = World.State {
-      state.entities.filterNot {
-        case World.PlantEntity(id, _, _, _) => id == plant.id
-        case _ => false
-      }
-    }
-  }
-  def updatePlant(entity: World.PlantEntity) = {
-    removePlant(entity)
-    state = World.State { state.entities :+ entity }
-  }
   def receive = {
     case World.AnnounceWorldState => announceState
     case World.GetUniqueAgentID => sender ! World.UniqueAgentID(getUniqueID)
-    case World.RemoveAgent(agent) => removeAgent(agent)
-    case World.UpdateAgent(agent) => updateAgent(agent)
-    case World.UpdatePlant(plant) => updatePlant(plant)
-    case World.RemovePlant(plant) => removePlant(plant)
+    case World.RemoveEntity(entity) => remove[entity.type](entity)
+    case World.UpdateEntity(entity) => update(entity)
   }
 }

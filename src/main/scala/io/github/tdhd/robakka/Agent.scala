@@ -169,7 +169,7 @@ class Agent(entity: World.AgentEntity, behaviour: BaseBehaviour, worldSize: Worl
     action(commandSet)
 
     // publish own state
-    context.system.eventStream.publish(World.UpdateAgent(selfState))
+    context.system.eventStream.publish(World.UpdateEntity(selfState))
   }
 
   /**
@@ -184,7 +184,7 @@ class Agent(entity: World.AgentEntity, behaviour: BaseBehaviour, worldSize: Worl
 
   def die() = {
     scheduler.cancel
-    context.system.eventStream.publish(World.RemoveAgent(selfState))
+    context.system.eventStream.publish(World.RemoveEntity(selfState))
     context.stop(self)
   }
 

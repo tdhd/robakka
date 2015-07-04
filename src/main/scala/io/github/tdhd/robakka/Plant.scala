@@ -30,13 +30,13 @@ class Plant(entity: World.PlantEntity, gameUpdateInterval: FiniteDuration) exten
 
   def die() = {
     scheduler.cancel
-    context.system.eventStream.publish(World.RemovePlant(selfState))
+    context.system.eventStream.publish(World.RemoveEntity(selfState))
     context.stop(self)
   }
 
   def update() = {
     // publish own state
-    context.system.eventStream.publish(World.UpdatePlant(selfState))
+    context.system.eventStream.publish(World.UpdateEntity(selfState))
   }
 
   def receive = {
