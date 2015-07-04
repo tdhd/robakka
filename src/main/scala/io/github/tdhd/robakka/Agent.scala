@@ -123,14 +123,15 @@ class Agent(entity: World.AgentEntity, behaviour: BaseBehaviour, worldSize: Worl
    */
   def consumePlant() = {
     val somePlant = BehaviourHelpers.getFromList[World.PlantEntity](worldState.entities).filter {
-      case World.PlantEntity(World.Location(row, col)) => row == selfState.position.row && col == selfState.position.col
+      case World.PlantEntity(id, energy, World.Location(row, col), ref) => row == selfState.position.row && col == selfState.position.col
       case _ => false
     }.headOption
 
     somePlant.foreach {
       p =>
-        (selfState.world ? World.ConsumePlant(p, selfState)).mapTo[World.PlantConsumed].onSuccess {
-          case World.PlantConsumed(gain) => updateHealth(selfState.health + gain)
+        // ask the plant to be consumed and update health in case of success
+        (p.selfRef ? World.ConsumePlant).mapTo[World.PlantConsumed].onSuccess {
+          case World.PlantConsumed(energy) => updateHealth(selfState.health + energy)
         }
     }
   }
