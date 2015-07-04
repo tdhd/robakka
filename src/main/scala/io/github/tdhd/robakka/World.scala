@@ -35,11 +35,10 @@ object World {
   // elements of the game
   sealed trait GameEntity {
     def position: Location
-    // TODO: unify with all entities (agents and plants)
-    //def id: Long
+    def id: Long
   }
   case class AgentEntity(position: Location,
-    agentId: Long,
+    id: Long,
     team: Long,
     health: Double,
     selfRef: ActorRef,
@@ -129,7 +128,7 @@ class World(teams: Iterable[Game.Team], worldSize: World.Size, gameUpdateInterva
         for (i <- 1 to 25) {
           val entity = World.AgentEntity(
             position = teamStartLocation,
-            agentId = getUniqueID,
+            id = getUniqueID,
             team = team.id,
             health = 1.0,
             selfRef = self,
@@ -142,7 +141,7 @@ class World(teams: Iterable[Game.Team], worldSize: World.Size, gameUpdateInterva
   def removeAgent(agent: World.AgentEntity) = {
     state = World.State {
       state.entities.filterNot {
-        case World.AgentEntity(_, id, _, _, _, _) => id == agent.agentId
+        case World.AgentEntity(_, id, _, _, _, _) => id == agent.id
         case _ => false
       }
     }

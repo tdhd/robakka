@@ -96,7 +96,7 @@ class Agent(entity: World.AgentEntity, behaviour: BaseBehaviour, worldSize: Worl
       (selfState.world ? World.GetUniqueAgentID).mapTo[World.UniqueAgentID].onSuccess {
         case World.UniqueAgentID(spawnId) =>
           // create copy of self and spawn child, reduce own health
-          val agentEntity = selfState.copy(agentId = spawnId, health = newHealth)
+          val agentEntity = selfState.copy(id = spawnId, health = newHealth)
           context.actorOf(Agent.props(agentEntity, behaviour, worldSize, gameUpdateInterval))
           selfState = selfState.copy(health = newHealth)
       }
