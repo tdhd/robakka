@@ -41,9 +41,9 @@ object World {
     health: Double,
     selfRef: ActorRef,
     world: ActorRef) extends GameEntity
-  case class PlantEntity(id: Long,
+  case class PlantEntity(position: Location,
+    id: Long,
     energy: Double,
-    position: Location,
     selfRef: ActorRef) extends GameEntity
 
   case class Location(row: Int, col: Int) {

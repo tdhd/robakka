@@ -123,7 +123,7 @@ class Agent(entity: World.AgentEntity, behaviour: BaseBehaviour, worldSize: Worl
    */
   def consumePlant() = {
     val somePlant = BehaviourHelpers.getFromList[World.PlantEntity](worldState.entities).filter {
-      case World.PlantEntity(id, energy, World.Location(row, col), ref) => row == selfState.position.row && col == selfState.position.col
+      case World.PlantEntity(World.Location(row, col), id, energy, ref) => row == selfState.position.row && col == selfState.position.col
       case _ => false
     }.headOption
 
