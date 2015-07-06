@@ -70,8 +70,7 @@ object World {
     }
   }
 
-  case class StateContainer(
-    world: scala.collection.mutable.Map[(Int, Int), List[GameEntity]] = scala.collection.mutable.Map[(Int, Int), List[World.GameEntity]]())
+  case class StateContainer(world: Map[(Int, Int), List[GameEntity]] = Map[(Int, Int), List[World.GameEntity]]())
   case class Size(nRows: Int, nCols: Int)
 
   // TODO
@@ -93,7 +92,7 @@ class World(teams: Iterable[Game.Team], worldSize: World.Size, gameUpdateInterva
   val scheduler = context.system.scheduler.schedule(0 seconds, gameUpdateInterval, self, World.AnnounceWorldState)
 
   // empty state
-  var state = World.StateContainer()
+  var state = World.StateContainer().world
   var IDCounter: Long = 0
 
   def getUniqueID() = {
@@ -101,7 +100,7 @@ class World(teams: Iterable[Game.Team], worldSize: World.Size, gameUpdateInterva
     IDCounter
   }
 
-  def announceState() = context.system.eventStream.publish(state)
+  def announceState() = context.system.eventStream.publish(World.StateContainer(state.toMap))
 
   override def postStop() = {
     context.system.eventStream.unsubscribe(self)
@@ -114,7 +113,7 @@ class World(teams: Iterable[Game.Team], worldSize: World.Size, gameUpdateInterva
       i <- 0 to worldSize.nRows
       j <- 0 to worldSize.nCols
     } {
-      state = World.StateContainer(state.world += (i, j) -> List.empty[World.GameEntity])
+      state += (i, j) -> List.empty[World.GameEntity]
 
       // add plant?
       if (scala.util.Random.nextBoolean) {
@@ -145,10 +144,8 @@ class World(teams: Iterable[Game.Team], worldSize: World.Size, gameUpdateInterva
 
   /** method to remove an entity from the world **/
   def remove(entity: World.GameEntity) = {
-    state = World.StateContainer {
-      state.world.map {
-        case ((row, col), entities) => ((row, col), entities.filterNot(_.id == entity.id))
-      }
+    state = state.map {
+      case ((row, col), entities) => ((row, col), entities.filterNot(_.id == entity.id))
     }
   }
 
@@ -156,8 +153,8 @@ class World(teams: Iterable[Game.Team], worldSize: World.Size, gameUpdateInterva
   def update(entity: World.GameEntity) = {
     remove(entity)
     val (r, c) = (entity.position.row, entity.position.col)
-    val updated = state.world((r, c)) ++ List(entity)
-    World.StateContainer(state.world += (r, c) -> updated)
+    val updated = state((r, c)) ++ List(entity)
+    state += (r, c) -> updated
   }
 
   def receive = {
