@@ -4,15 +4,16 @@ import io.github.tdhd.robakka._
 import io.github.tdhd.robakka.Agent.MoveCommand
 
 case object FollowEnemyBehaviour extends BaseBehaviour {
-  def act(entity: World.AgentEntity, worldState: World.State) = {
+  def act(entity: World.AgentEntity, worldState: World.StateContainer) = {
 
-    val agents = BehaviourHelpers.entities2MoveCommand[World.AgentEntity](entity, worldState)
+    val agents = BehaviourHelpers.entities2MoveCommand(entity, worldState)
 
     val enemies = agents.filter {
       case (World.AgentEntity(_, agentId, team, health, _, _), _) => team != entity.team
+      case _ => false
     }
 
-    val shooting = enemies.map {
+    val shooting = enemies.collect {
       case (World.AgentEntity(_, _, _, _, ref, _), _) => Agent.Shoot(ref)
     }.headOption
 
@@ -23,4 +24,3 @@ case object FollowEnemyBehaviour extends BaseBehaviour {
     Agent.CommandSet(move = Option(move), action = shooting)
   }
 }
-

@@ -14,7 +14,7 @@ import io.github.tdhd.robakka.behaviours._
 
 object Agent {
   // agent -> agent
-  case object AgentSelfAction
+//  case object AgentSelfAction
   // agent -> agent
   case class Attack(damage: Double)
 
@@ -64,13 +64,13 @@ class Agent(entity: World.AgentEntity, behaviour: BaseBehaviour, worldSize: Worl
   implicit val timeout = Timeout(1 seconds)
 
   // schedule messages to self
-  val scheduler = context.system.scheduler.schedule(0 seconds, gameUpdateInterval, self, Agent.AgentSelfAction)
+//  val scheduler = context.system.scheduler.schedule(0 seconds, gameUpdateInterval, self, Agent.AgentSelfAction)
   // subscribe to changes of the world
-  context.system.eventStream.subscribe(self, classOf[World.State])
+  context.system.eventStream.subscribe(self, classOf[World.StateContainer])
 
   // update reference: if not copied, the ref of the world is kept
   var selfState = entity.copy(selfRef = self)
-  var worldState = World.State(entities = List.empty[World.GameEntity])
+  var worldState = World.StateContainer()
 
   override def postStop() = context.system.eventStream.unsubscribe(self)
 
@@ -78,10 +78,9 @@ class Agent(entity: World.AgentEntity, behaviour: BaseBehaviour, worldSize: Worl
    * returns the neighbourhood of the current position
    */
   def localWorldState() = {
-    World.State {
-      worldState.entities.filter {
-        case entity: World.GameEntity =>
-          scala.math.abs(entity.position.row - selfState.position.row) <= 1 && scala.math.abs(entity.position.col - selfState.position.col) <= 1
+    World.StateContainer {
+      worldState.world.filter {
+        case ((row, col), _) => scala.math.abs(row - selfState.position.row) <= 1 && scala.math.abs(col - selfState.position.col) <= 1
       }
     }
   }
@@ -122,10 +121,12 @@ class Agent(entity: World.AgentEntity, behaviour: BaseBehaviour, worldSize: Worl
    * consumes a plant if standing on it
    */
   def consumePlant() = {
-    val somePlant = BehaviourHelpers.getFromList[World.PlantEntity](worldState.entities).filter {
-      case World.PlantEntity(World.Location(row, col), id, energy, ref) => row == selfState.position.row && col == selfState.position.col
-      case _ => false
-    }.headOption
+    val somePlant = worldState.world.flatMap {
+      case ((row, col), entities) => entities.filter {
+        case World.PlantEntity(World.Location(row, col), _, _, _) => row == selfState.position.row && col == selfState.position.col
+        case _ => false
+      }
+    }.headOption.asInstanceOf[Option[World.PlantEntity]]
 
     somePlant.foreach {
       p =>
@@ -183,14 +184,17 @@ class Agent(entity: World.AgentEntity, behaviour: BaseBehaviour, worldSize: Worl
   }
 
   def die() = {
-    scheduler.cancel
+//    scheduler.cancel
     context.system.eventStream.publish(World.RemoveEntity(selfState))
     context.stop(self)
   }
 
   def receive = {
-    case Agent.AgentSelfAction => act()
-    case ws: World.State => worldState = ws
+    // TODO
+    //case Agent.AgentSelfAction => act()
+    case sc: World.StateContainer =>
+      worldState = sc
+      act()
     case Agent.Attack(damage) => defend(damage)
     case _ =>
   }

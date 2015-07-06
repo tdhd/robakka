@@ -4,13 +4,13 @@ import io.github.tdhd.robakka._
 import io.github.tdhd.robakka.Agent.MoveCommand
 
 case object FollowPlantBehaviour extends BaseBehaviour {
-  def act(entity: World.AgentEntity, worldState: World.State) = {
+  def act(entity: World.AgentEntity, worldState: World.StateContainer) = {
 
-    val plants = BehaviourHelpers.entities2MoveCommand[World.PlantEntity](entity, worldState)
+    val plants = BehaviourHelpers.entities2MoveCommand(entity, worldState)
 
-    val move = plants.headOption.map {
-      case (plant, moveCommand) => moveCommand
-    }.getOrElse(BehaviourHelpers.getRandomMove)
+    val move = plants.collect {
+      case (plant: World.PlantEntity, moveCommand) => moveCommand
+    }.headOption.getOrElse(BehaviourHelpers.getRandomMove)
 
     Agent.CommandSet(move = Option(move))
   }

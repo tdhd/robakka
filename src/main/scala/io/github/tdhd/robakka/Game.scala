@@ -20,7 +20,7 @@ object Game {
 
   def props(teams: Iterable[Game.Team],
     worldSize: World.Size = World.Size(30, 30),
-    gameUpdateInterval: FiniteDuration = 250 milliseconds) = Props(new Game(teams, worldSize, gameUpdateInterval))
+    gameUpdateInterval: FiniteDuration = 500 milliseconds) = Props(new Game(teams, worldSize, gameUpdateInterval))
 }
 
 /**
@@ -38,7 +38,7 @@ class Game(teams: Iterable[Game.Team], worldSize: World.Size, gameUpdateInterval
   // a list of subscribers which wish to be notified about the game
   var gameSubscribers = List.empty[ActorRef]
   // subscribe to world states
-  context.system.eventStream.subscribe(self, classOf[World.State])
+  context.system.eventStream.subscribe(self, classOf[World.StateContainer])
 
   def die() = {
     context.system.eventStream.unsubscribe(self)
@@ -49,7 +49,7 @@ class Game(teams: Iterable[Game.Team], worldSize: World.Size, gameUpdateInterval
   def receive = {
     case Game.Subscribe(ref) => gameSubscribers +:= ref
     case Game.Unsubscribe(ref) => gameSubscribers = gameSubscribers.filterNot(_ == ref)
-    case ws: World.State => gameSubscribers.foreach(_ ! ws)
+    case sc: World.StateContainer => gameSubscribers.foreach(_ ! sc)
 
     case Terminated(ref) =>
       log.info("{} terminated, {} children left", ref, context.children.size)

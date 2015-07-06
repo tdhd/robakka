@@ -6,6 +6,6 @@ import scala.reflect.{ ClassTag, classTag }
 
 // act returns a set of commands: move, attack, defend
 trait BaseBehaviour {
-  def act(entity: World.AgentEntity, worldState: World.State): Agent.CommandSet
+  def act(entity: World.AgentEntity, worldState: World.StateContainer): Agent.CommandSet
 }
 

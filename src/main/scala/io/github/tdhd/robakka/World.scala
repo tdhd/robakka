@@ -70,8 +70,11 @@ object World {
     }
   }
 
-  case class State(entities: List[GameEntity])
+  case class StateContainer(world: Map[(Int, Int), List[GameEntity]] = Map[(Int, Int), List[World.GameEntity]]())
   case class Size(nRows: Int, nCols: Int)
+
+  // TODO
+  //case class Configuration(plantProbability: Double)
 
   def props(teams: Iterable[Game.Team],
     worldSize: Size,
@@ -88,7 +91,8 @@ class World(teams: Iterable[Game.Team], worldSize: World.Size, gameUpdateInterva
   // announce the worlds state to everyone at a fixed interval
   val scheduler = context.system.scheduler.schedule(0 seconds, gameUpdateInterval, self, World.AnnounceWorldState)
 
-  var state = World.State(entities = List.empty[World.GameEntity])
+  // empty state
+  var state = World.StateContainer().world
   var IDCounter: Long = 0
 
   def getUniqueID() = {
@@ -96,20 +100,22 @@ class World(teams: Iterable[Game.Team], worldSize: World.Size, gameUpdateInterva
     IDCounter
   }
 
-  def announceState() = context.system.eventStream.publish(state)
+  def announceState() = context.system.eventStream.publish(World.StateContainer(state.toMap))
 
   override def postStop() = {
     context.system.eventStream.unsubscribe(self)
     scheduler.cancel
   }
 
-  // spawns initial Agents
+  /** initializes the world state **/
   override def preStart() = {
-    // create grass everywhere
     for {
-      i <- 1 to worldSize.nRows
-      j <- 1 to worldSize.nCols
+      i <- 0 to worldSize.nRows
+      j <- 0 to worldSize.nCols
     } {
+      state += (i, j) -> List.empty[World.GameEntity]
+
+      // add plant?
       if (scala.util.Random.nextBoolean) {
         val plantEntity = World.PlantEntity(id = getUniqueID, energy = 1.0, position = World.Location(row = i, col = j), selfRef = self)
         context.actorOf(Plant.props(plantEntity, gameUpdateInterval))
@@ -134,26 +140,27 @@ class World(teams: Iterable[Game.Team], worldSize: World.Size, gameUpdateInterva
     }
   }
 
-  /** generic method to remove an entity from the world **/
-  def remove[T: ClassTag](entity: World.GameEntity) = {
-    state = World.State {
-      state.entities.filterNot {
-        case item: T => item.id == entity.id
-        case _ => false
-      }
+  //  def removeElement(entity: World.GameEntity, list: List[World.GameEntity]) = list diff List(entity)
+
+  /** method to remove an entity from the world **/
+  def remove(entity: World.GameEntity) = {
+    state = state.map {
+      case ((row, col), entities) => ((row, col), entities.filterNot(_.id == entity.id))
     }
   }
 
-  /** generic update method to update an entity in the world **/
+  /** update method to update an entity in the world **/
   def update(entity: World.GameEntity) = {
-    remove[entity.type](entity)
-    state = World.State { state.entities :+ entity }
+    remove(entity)
+    val (r, c) = (entity.position.row, entity.position.col)
+    val updated = state((r, c)) ++ List(entity)
+    state += (r, c) -> updated
   }
 
   def receive = {
     case World.AnnounceWorldState => announceState
     case World.GetUniqueID => sender ! World.UniqueID(getUniqueID)
-    case World.RemoveEntity(entity) => remove[entity.type](entity)
+    case World.RemoveEntity(entity) => remove(entity)
     case World.UpdateEntity(entity) => update(entity)
   }
 }
